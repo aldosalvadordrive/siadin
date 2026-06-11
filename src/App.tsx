@@ -22,6 +22,7 @@ import RiwayatScreen from './components/RiwayatScreen';
 import CetakScreen from './components/CetakScreen';
 import EditKopScreen from './components/EditKopScreen';
 import KelolaAdminScreen from './components/KelolaAdminScreen';
+import BerkasPemohonScreen from './components/BerkasPemohonScreen';
 
 export default function App() {
   // Session authentication state (Halaman 1)
@@ -145,6 +146,12 @@ export default function App() {
       }
       return pmh;
     });
+    setPermohonanList(updated);
+    savePermohonanList(updated);
+  };
+
+  const handleUpdatePermohonan = (updatedPmh: Permohonan) => {
+    const updated = permohonanList.map((p) => p.id === updatedPmh.id ? updatedPmh : p);
     setPermohonanList(updated);
     savePermohonanList(updated);
   };
@@ -279,6 +286,13 @@ export default function App() {
             onAddASN={handleAddASN}
             onUpdateASN={handleUpdateASN}
             onDeleteASN={handleDeleteASN}
+          />
+        );
+      case 'berkas-pemohon':
+        return (
+          <BerkasPemohonScreen
+            permohonanList={permohonanList}
+            onUpdatePermohonan={handleUpdatePermohonan}
           />
         );
       case 'buat-surat':

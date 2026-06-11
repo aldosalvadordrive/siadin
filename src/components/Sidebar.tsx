@@ -14,7 +14,8 @@ import {
   Menu,
   ShieldAlert,
   Building,
-  User as UserIcon
+  User as UserIcon,
+  FolderOpen
 } from 'lucide-react';
 
 
@@ -40,6 +41,7 @@ export default function Sidebar({
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'data-asn', label: 'Data Pegawai ASN', icon: Users },
+    { id: 'berkas-pemohon', label: 'Berkas Pemohon', icon: FolderOpen },
     { id: 'buat-surat', label: 'Buat Surat', icon: FileSpreadsheet },
     { id: 'riwayat-dokumen', label: 'Riwayat Surat', icon: History },
     { id: 'cetak-pdf', label: 'Tampilan Cetak / PDF', icon: Printer },

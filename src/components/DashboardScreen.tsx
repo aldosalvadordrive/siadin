@@ -629,34 +629,66 @@ export default function DashboardScreen({
               )}
 
               {/* Action Cetak setelah Verifikasi */}
-              {(selectedPmh.status === 'Sedang Diproses' || selectedPmh.status === 'Selesai') && (
-                <div className="p-3 bg-blue-50 border border-blue-250 rounded-xl space-y-2">
-                  <span className="font-extrabold text-blue-800 block text-[11px] uppercase tracking-wider">🖨️ Tindak Lanjut: Cetak & Terbitkan Surat</span>
-                  <p className="text-[10.5px] text-blue-700 leading-relaxed m-0 font-medium">
-                    Data pemohon telah terverifikasi. Anda dapat langsung menggenerasi dokumen resmi dan mencetaknya dalam lembaran PDF resmi/Kop Surat.
-                  </p>
-                  <div className="pt-1 flex gap-2">
-                    <button
-                      onClick={() => {
-                        if (onGenerateKeteranganFromPermohonan) {
-                          onGenerateKeteranganFromPermohonan(selectedPmh);
-                          setSelectedPmh(null);
-                        }
-                      }}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[11px] py-2 px-3 rounded-lg shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer hover:shadow-md"
-                    >
-                      <Printer size={13} />
-                      Cetak Surat Keterangan
-                    </button>
-                    <button
-                      onClick={() => window.print()}
-                      className="bg-white hover:bg-slate-50 text-slate-800 font-extrabold text-[11px] py-2 px-3 rounded-lg border border-slate-200 shadow-3xs transition-all flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      Cetak Form Detail
-                    </button>
+              {(selectedPmh.status === 'Sedang Diproses' || selectedPmh.status === 'Selesai') && (() => {
+                const isLengkap = selectedPmh.statusVerifikasi === 'Lengkap';
+                const hasDocsUploaded = !!(selectedPmh.skCpnsUrl && selectedPmh.skPnsUrl && selectedPmh.skPangkatUrl && selectedPmh.suratPermohonanUrl);
+                const canGenerate = isLengkap && hasDocsUploaded;
+
+                return (
+                  <div className="p-3 bg-blue-50 border border-blue-250 rounded-xl space-y-2">
+                    <span className="font-extrabold text-blue-800 block text-[11px] uppercase tracking-wider">🖨️ Tindak Lanjut: Cetak & Terbitkan Surat</span>
+                    <p className="text-[10.5px] text-blue-700 leading-relaxed m-0 font-medium">
+                      Data pemohon telah terverifikasi. Anda dapat langsung menggenerasi dokumen resmi dan mencetaknya dalam lembaran PDF resmi/Kop Surat.
+                    </p>
+                    
+                    <div className="pt-1">
+                      {!canGenerate ? (
+                        <div className="p-2.5 bg-amber-50/80 border border-amber-250 text-amber-900 rounded-xl space-y-1 text-[10px] mb-2 leading-tight">
+                          <div className="flex items-center gap-1 font-extrabold text-amber-850">
+                            <AlertTriangle size={12} className="text-amber-600shrink-0" />
+                            <span>Penerbitan Dinonaktifkan Sementara:</span>
+                          </div>
+                          <ul className="list-disc pl-3.5 space-y-0.5 m-0 font-semibold text-amber-800">
+                            {!hasDocsUploaded && <li>Berkas pemohon belum diunggah lengkap di Google Drive.</li>}
+                            {!isLengkap && <li>Status verifikasi berkas bukan "Lengkap" (saat ini: "{selectedPmh.statusVerifikasi || 'Menunggu Verifikasi'}").</li>}
+                          </ul>
+                        </div>
+                      ) : (
+                        <div className="p-2 bg-emerald-50 border border-emerald-250 text-emerald-850 rounded-xl text-[10px] font-bold flex items-center gap-1.5 mb-2 leading-none">
+                          <CheckCircle size={12} className="text-emerald-600 shrink-0" />
+                          <span>Berkas Lengkap & Terverifikasi! Surat dapat diterbitkan.</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-1 flex gap-2">
+                      <button
+                        disabled={!canGenerate}
+                        onClick={() => {
+                          if (onGenerateKeteranganFromPermohonan) {
+                            onGenerateKeteranganFromPermohonan(selectedPmh);
+                            setSelectedPmh(null);
+                          }
+                        }}
+                        className={`flex-1 font-extrabold text-[11px] py-2 px-3 rounded-lg shadow-xs transition-all flex items-center justify-center gap-1.5 ${
+                          canGenerate
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer hover:shadow-md'
+                            : 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
+                        }`}
+                      >
+                        <Printer size={13} />
+                        Cetak Surat Keterangan
+                      </button>
+                      <button
+                        onClick={() => window.print()}
+                        className="bg-white hover:bg-slate-50 text-slate-800 font-extrabold text-[11px] py-2 px-3 rounded-lg border border-slate-200 shadow-3xs transition-all flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        Cetak Form Detail
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Contact Pemohon actions */}
               <div className="bg-slate-900 text-slate-200 p-3 rounded-xl space-y-2">

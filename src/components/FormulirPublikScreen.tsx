@@ -17,7 +17,14 @@ import {
   XCircle,
   FileText,
   Check,
-  HelpCircle
+  HelpCircle,
+  FolderOpen,
+  Upload,
+  Trash2,
+  FileUp,
+  HardDrive,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 import { Permohonan, KopSurat } from '../types';
 import BKPSDMDLogo from './BKPSDMDLogo';
@@ -51,6 +58,20 @@ export default function FormulirPublikScreen({
   // States
   const [errorMsg, setErrorMsg] = useState('');
   const [successData, setSuccessData] = useState<Permohonan | null>(null);
+
+  // File attachments state (required)
+  const [skCpnsFile, setSkCpnsFile] = useState<File | null>(null);
+  const [skPnsFile, setSkPnsFile] = useState<File | null>(null);
+  const [skPangkatFile, setSkPangkatFile] = useState<File | null>(null);
+  const [suratPermohonanFile, setSuratPermohonanFile] = useState<File | null>(null);
+
+  // File upload state trackers
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  const [uploadError, setUploadError] = useState('');
+
+  // Google Authentication Token management (local state)
+  const [googleToken, setGoogleToken] = useState<string | null>(localStorage.getItem('siadin_google_drive_token'));
+  const [isLoggingInGoogle, setIsLoggingInGoogle] = useState(false);
 
   // Status search States
   const [searchQuery, setSearchQuery] = useState('');
@@ -88,9 +109,61 @@ export default function FormulirPublikScreen({
     return cleanPhone.length >= 9 && cleanPhone.length <= 15;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleConnectGoogle = async () => {
+    setIsLoggingInGoogle(true);
+    setErrorMsg('');
+    try {
+      const { googleSignIn } = await import('../utils/googleAuth');
+      const res = await googleSignIn();
+      if (res?.accessToken) {
+        setGoogleToken(res.accessToken);
+      } else {
+        setErrorMsg('Gagal terhubung dengan Google Drive. Silakan ulangi.');
+      }
+    } catch (e: any) {
+      console.error(e);
+      setErrorMsg('Gagal menyambungkan Google Drive: ' + (e.message || 'Error internal Google'));
+    } finally {
+      setIsLoggingInGoogle(false);
+    }
+  };
+
+  const handleDisconnectGoogle = async () => {
+    try {
+      const { logoutGoogle } = await import('../utils/googleAuth');
+      await logoutGoogle();
+      setGoogleToken(null);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const validateFile = (file: File): string | null => {
+    const allowedTypes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/jpg',
+      'image/png'
+    ];
+    const maxBytes = 5 * 1024 * 1024; // 5 MB
+
+    // Safe extension checks
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    const isAllowedExt = ext && ['pdf', 'jpg', 'jpeg', 'png'].includes(ext);
+
+    if (!allowedTypes.includes(file.type) && !isAllowedExt) {
+      return 'Format file harus berupa PDF, JPG, JPEG, atau PNG.';
+    }
+    if (file.size > maxBytes) {
+      return 'Ukuran file tidak boleh melebihi 5 MB.';
+    }
+    return null;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setUploadError('');
 
     // Field check
     if (!nip || !nama || !golongan || !jabatan || !unitKerja || !instansi || !noHp || !keperluan) {
@@ -111,36 +184,84 @@ export default function FormulirPublikScreen({
       return;
     }
 
-    // Create Permohonan
+    // Document inclusion validation
+    if (!skCpnsFile || !skPnsFile || !skPangkatFile || !suratPermohonanFile) {
+      setErrorMsg('Terdapat dokumen persyaratan yang belum diunggah. Silakan lengkapi seluruh 4 berkas wajib.');
+      return;
+    }
+
+    // Google Token Check
+    const activeToken = googleToken || localStorage.getItem('siadin_google_drive_token');
+    if (!activeToken) {
+      setErrorMsg('Fitur penyimpanan otomatis memerlukan koneksi Google Drive. Harap klik tombol "Hubungkan ke Google Drive" terlebih dahulu.');
+      return;
+    }
+
+    // Create Permohonan with Google Drive attachments
     const generatedId = 'pmh-' + Date.now();
     const generatedNo = `PMH-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    const newPMH: Permohonan = {
-      id: generatedId,
-      nomorPermohonan: generatedNo,
-      tanggalPermohonan: new Date().toISOString().split('T')[0],
-      nip: cleanNip.replace(/(\d{8})(\d{6})(\d{1})(\d{3})/, '$1 $2 $3 $4'), // Format NIP for display
-      nama,
-      golongan,
-      jabatan,
-      unitKerja,
-      instansi,
-      noHp,
-      keperluan,
-      status: 'Menunggu Verifikasi'
-    };
+    try {
+      setUploadStatus('uploading');
+      
+      const { uploadPermohonanDocs } = await import('../utils/googleDrive');
+      const uploadRes = await uploadPermohonanDocs(activeToken, nama, cleanNip, {
+        skCpns: skCpnsFile,
+        skPns: skPnsFile,
+        skPangkat: skPangkatFile,
+        suratPermohonan: suratPermohonanFile
+      });
 
-    onAddPermohonan(newPMH);
-    setSuccessData(newPMH);
+      setUploadStatus('success');
 
-    // Reset Form
-    setNip('');
-    setNama('');
-    setGolongan('');
-    setJabatan('');
-    setUnitKerja('');
-    setNoHp('');
-    setKeperluan('');
+      const newPMH: Permohonan = {
+        id: generatedId,
+        nomorPermohonan: generatedNo,
+        tanggalPermohonan: new Date().toISOString().split('T')[0],
+        nip: cleanNip.replace(/(\d{8})(\d{6})(\d{1})(\d{3})/, '$1 $2 $3 $4'), // Format NIP for display
+        nama,
+        golongan,
+        jabatan,
+        unitKerja,
+        instansi,
+        noHp,
+        keperluan,
+        status: 'Menunggu Verifikasi',
+        skCpnsUrl: uploadRes.skCpnsUrl,
+        skPnsUrl: uploadRes.skPnsUrl,
+        skPangkatUrl: uploadRes.skPangkatUrl,
+        suratPermohonanUrl: uploadRes.suratPermohonanUrl,
+        folderPemohonUrl: uploadRes.folderPemohonUrl,
+        statusVerifikasi: 'Menunggu Verifikasi',
+        namaFileSkCpns: skCpnsFile.name,
+        namaFileSkPns: skPnsFile.name,
+        namaFileSkPangkat: skPangkatFile.name,
+        namaFileSuratPermohonan: suratPermohonanFile.name
+      };
+
+      onAddPermohonan(newPMH);
+      setSuccessData(newPMH);
+
+      // Reset state upon successful pipeline
+      setNip('');
+      setNama('');
+      setGolongan('');
+      setJabatan('');
+      setUnitKerja('');
+      setNoHp('');
+      setKeperluan('');
+      setSkCpnsFile(null);
+      setSkPnsFile(null);
+      setSkPangkatFile(null);
+      setSuratPermohonanFile(null);
+      setUploadStatus('idle');
+    } catch (err: any) {
+      console.error(err);
+      setUploadStatus('error');
+      const errMsg = err.message || 'Silakan cek sisa kuota penyimpanan Google Drive Anda atau hubungi Admin.';
+      setUploadError(errMsg);
+      setErrorMsg('Gagal mengunggah berkas ke Google Drive: ' + errMsg);
+    }
   };
 
   const handleTrackStatus = (e: React.FormEvent) => {
@@ -501,14 +622,293 @@ export default function FormulirPublikScreen({
                   </div>
                 </div>
 
+                {/* Upload Berkas Persyaratan Section */}
+                <div className="border-t border-slate-700 pt-5 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
+                        <FolderOpen size={16} className="text-amber-500" />
+                        Upload Berkas Persyaratan <span className="text-red-500 font-bold">* Wajib</span>
+                      </h3>
+                      <p className="text-[11px] text-slate-400 leading-normal mt-0.5">
+                        Maksimal ukuran file: 5 MB per berkas. Format didukung: PDF, JPG, JPEG, PNG. Berkas akan diunggah ke Google Drive SI-ADIN.
+                      </p>
+                    </div>
+
+                    {/* Google Drive Connection Widget */}
+                    <div>
+                      {googleToken ? (
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-950/50 border border-emerald-500/30 rounded-xl">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          <span className="text-[10px] font-bold text-emerald-400">Google Drive Aktif</span>
+                          <button
+                            type="button"
+                            onClick={handleDisconnectGoogle}
+                            className="text-[9px] font-semibold text-rose-400 hover:text-rose-300 ml-1 underline cursor-pointer"
+                          >
+                            Hubungkan Ulang
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={isLoggingInGoogle}
+                          onClick={handleConnectGoogle}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-extrabold text-[10px] rounded-xl transition-all cursor-pointer shadow-md shadow-blue-500/10"
+                        >
+                          {isLoggingInGoogle ? (
+                            <>
+                              <RefreshCw size={11} className="animate-spin" />
+                              <span>Menyambungkan...</span>
+                            </>
+                          ) : (
+                            <>
+                              <HardDrive size={11} />
+                              <span>Hubungkan ke Google Drive</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Individual File Inputs */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* File 1: SK CPNS */}
+                    <div className="bg-slate-900/60 border border-slate-850 p-3.5 rounded-2xl flex flex-col justify-between space-y-2">
+                      <div className="space-y-0.5">
+                        <span className="text-[11px] font-bold text-slate-300 block">1. SK CPNS <span className="text-red-500">*</span></span>
+                        <p className="text-[9px] text-slate-500 leading-normal">Unggah fotokopi Surat Keputusan CPNS resmi Anda.</p>
+                      </div>
+                      
+                      {skCpnsFile ? (
+                        <div className="flex items-center justify-between p-2 bg-slate-800 rounded-xl border border-slate-700 mt-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <FileText size={15} className="text-blue-400 shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-[10.5px] font-bold text-white truncate m-0 leading-tight">{skCpnsFile.name}</p>
+                              <p className="text-[9px] text-slate-400 font-mono m-0 mt-0.5">{(skCpnsFile.size / (1024 * 1024)).toFixed(2)} MB</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setSkCpnsFile(null)}
+                            className="p-1 px-2 hover:bg-rose-950/30 text-rose-400 hover:text-rose-300 rounded-lg cursor-pointer transition-colors"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="relative border border-dashed border-slate-700 hover:border-slate-500 transition-colors rounded-xl p-3 text-center bg-slate-950/20 cursor-pointer group mt-2">
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const err = validateFile(file);
+                                if (err) {
+                                  setErrorMsg(`SK CPNS: ${err}`);
+                                } else {
+                                  setSkCpnsFile(file);
+                                  setErrorMsg('');
+                                }
+                              }
+                            }}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                          <Upload size={14} className="mx-auto text-slate-400 group-hover:text-blue-400 transition-colors mb-1" />
+                          <span className="text-[10px] text-slate-400 block font-semibold group-hover:text-slate-350 transition-colors">Pilih / Seret Dokumen</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* File 2: SK PNS */}
+                    <div className="bg-slate-900/60 border border-slate-850 p-3.5 rounded-2xl flex flex-col justify-between space-y-2">
+                      <div className="space-y-0.5">
+                        <span className="text-[11px] font-bold text-slate-300 block">2. SK PNS <span className="text-red-500">*</span></span>
+                        <p className="text-[9px] text-slate-500 leading-normal">Unggah fotokopi Surat Keputusan PNS Tingkat 100% Anda.</p>
+                      </div>
+                      
+                      {skPnsFile ? (
+                        <div className="flex items-center justify-between p-2 bg-slate-800 rounded-xl border border-slate-700 mt-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <FileText size={15} className="text-emerald-400 shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-[10.5px] font-bold text-white truncate m-0 leading-tight">{skPnsFile.name}</p>
+                              <p className="text-[9px] text-slate-400 font-mono m-0 mt-0.5">{(skPnsFile.size / (1024 * 1024)).toFixed(2)} MB</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setSkPnsFile(null)}
+                            className="p-1 px-2 hover:bg-rose-950/30 text-rose-400 hover:text-rose-300 rounded-lg cursor-pointer transition-colors"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="relative border border-dashed border-slate-700 hover:border-slate-500 transition-colors rounded-xl p-3 text-center bg-slate-950/20 cursor-pointer group mt-2">
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const err = validateFile(file);
+                                if (err) {
+                                  setErrorMsg(`SK PNS: ${err}`);
+                                } else {
+                                  setSkPnsFile(file);
+                                  setErrorMsg('');
+                                }
+                              }
+                            }}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                          <Upload size={14} className="mx-auto text-slate-400 group-hover:text-blue-400 transition-colors mb-1" />
+                          <span className="text-[10px] text-slate-400 block font-semibold group-hover:text-slate-350 transition-colors">Pilih / Seret Dokumen</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* File 3: SK Pangkat Terakhir */}
+                    <div className="bg-slate-900/60 border border-slate-850 p-3.5 rounded-2xl flex flex-col justify-between space-y-2">
+                      <div className="space-y-0.5">
+                        <span className="text-[11px] font-bold text-slate-300 block">3. SK Pangkat Terakhir <span className="text-red-500">*</span></span>
+                        <p className="text-[9px] text-slate-500 leading-normal">Unggah Surat Keputusan pimpinan penyesuaian pangkat/golongan terakhir.</p>
+                      </div>
+                      
+                      {skPangkatFile ? (
+                        <div className="flex items-center justify-between p-2 bg-slate-800 rounded-xl border border-slate-700 mt-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <FileText size={15} className="text-amber-400 shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-[10.5px] font-bold text-white truncate m-0 leading-tight">{skPangkatFile.name}</p>
+                              <p className="text-[9px] text-slate-400 font-mono m-0 mt-0.5">{(skPangkatFile.size / (1024 * 1024)).toFixed(2)} MB</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setSkPangkatFile(null)}
+                            className="p-1 px-2 hover:bg-rose-950/30 text-rose-400 hover:text-rose-300 rounded-lg cursor-pointer transition-colors"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="relative border border-dashed border-slate-700 hover:border-slate-500 transition-colors rounded-xl p-3 text-center bg-slate-950/20 cursor-pointer group mt-2">
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const err = validateFile(file);
+                                if (err) {
+                                  setErrorMsg(`SK Pangkat: ${err}`);
+                                } else {
+                                  setSkPangkatFile(file);
+                                  setErrorMsg('');
+                                }
+                              }
+                            }}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                          <Upload size={14} className="mx-auto text-slate-400 group-hover:text-blue-400 transition-colors mb-1" />
+                          <span className="text-[10px] text-slate-400 block font-semibold group-hover:text-slate-350 transition-colors">Pilih / Seret Dokumen</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* File 4: Surat Permohonan ditujukan kepada Kepala BKPSDMD Kab. TTU */}
+                    <div className="bg-slate-900/60 border border-slate-850 p-3.5 rounded-2xl flex flex-col justify-between space-y-2">
+                      <div className="space-y-0.5">
+                        <span className="text-[11px] font-bold text-slate-300 block">4. Surat Permohonan Kepala BKPSDMD <span className="text-red-500">*</span></span>
+                        <p className="text-[9px] text-slate-500 leading-normal">Surat Permohonan yang ditujukan kepada Kepala BKPSDMD Kabupaten TTU.</p>
+                      </div>
+                      
+                      {suratPermohonanFile ? (
+                        <div className="flex items-center justify-between p-2 bg-slate-800 rounded-xl border border-slate-700 mt-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <FileText size={15} className="text-pink-400 shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-[10.5px] font-bold text-white truncate m-0 leading-tight">{suratPermohonanFile.name}</p>
+                              <p className="text-[9px] text-slate-400 font-mono m-0 mt-0.5">{(suratPermohonanFile.size / (1024 * 1024)).toFixed(2)} MB</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setSuratPermohonanFile(null)}
+                            className="p-1 px-2 hover:bg-rose-950/30 text-rose-400 hover:text-rose-300 rounded-lg cursor-pointer transition-colors"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="relative border border-dashed border-slate-700 hover:border-slate-500 transition-colors rounded-xl p-3 text-center bg-slate-950/20 cursor-pointer group mt-2">
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const err = validateFile(file);
+                                if (err) {
+                                  setErrorMsg(`Surat Permohonan: ${err}`);
+                                } else {
+                                  setSuratPermohonanFile(file);
+                                  setErrorMsg('');
+                                }
+                              }
+                            }}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                          <Upload size={14} className="mx-auto text-slate-400 group-hover:text-blue-400 transition-colors mb-1" />
+                          <span className="text-[10px] text-slate-400 block font-semibold group-hover:text-slate-350 transition-colors">Pilih / Seret Dokumen</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Upload Info Indicator */}
+                  {uploadStatus === 'uploading' && (
+                    <div className="bg-blue-950/30 border border-blue-800/40 text-blue-200 p-3 rounded-xl flex items-center gap-3">
+                      <RefreshCw size={16} className="text-blue-400 animate-spin" />
+                      <div className="text-xs">
+                        <span className="font-bold">Sedang Mengirim</span> - Berkas sedang disimpan ke Google Drive SI-ADIN terstruktur. Harap tunggu...
+                      </div>
+                    </div>
+                  )}
+
+                  {uploadStatus === 'error' && (
+                    <div className="bg-rose-950/30 border border-rose-800/40 text-rose-200 p-3 rounded-xl flex items-center gap-3">
+                      <AlertCircle size={16} className="text-rose-400 shrink-0" />
+                      <div className="text-xs">
+                        <span className="font-bold">Pengunggahan Gagal:</span> {uploadError || 'Terdapat kesalahan pada API Google.'}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Action buttons footer */}
                 <div className="border-t border-slate-700 pt-5 flex items-center justify-end">
                   <button
                     type="submit"
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 cursor-pointer transition-all hover:-translate-y-0.5"
+                    disabled={uploadStatus === 'uploading' || isLoggingInGoogle}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:bg-slate-700 disabled:text-slate-400 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 cursor-pointer transition-all hover:-translate-y-0.5 disabled:transform-none"
                   >
-                    <Send size={16} />
-                    Kirim Permohonan Surat
+                    {uploadStatus === 'uploading' ? (
+                      <>
+                        <RefreshCw size={16} className="animate-spin" />
+                        <span>Mengupload Dokumen...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send size={16} />
+                        <span>Kirim Permohonan Surat</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

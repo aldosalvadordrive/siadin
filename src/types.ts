@@ -92,6 +92,18 @@ export interface Permohonan {
   keperluan: string;
   status: 'Menunggu Verifikasi' | 'Sedang Diproses' | 'Selesai' | 'Ditolak';
   tanggalSelesai?: string;
+  
+  // Google Drive Uploads & Verification Fields
+  skCpnsUrl?: string;
+  skPnsUrl?: string;
+  skPangkatUrl?: string;
+  suratPermohonanUrl?: string;
+  folderPemohonUrl?: string;
+  statusVerifikasi?: 'Menunggu Verifikasi' | 'Lengkap' | 'Perlu Perbaikan';
+  namaFileSkCpns?: string;
+  namaFileSkPns?: string;
+  namaFileSkPangkat?: string;
+  namaFileSuratPermohonan?: string;
 }
 
 export interface KopSurat {
