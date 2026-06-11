@@ -1,0 +1,91 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@media print {
+  /* Hide the dashboard sidebar, header, control details, and any unrelated pages */
+  #adin-portal-shell > aside,
+  #adin-portal-shell header,
+  div.xl\:col-span-1,
+  #print-document-trigger,
+  button,
+  nav,
+  footer {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Reset layout constraints of administrative portal container during print-out */
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Ensure containing bounds don't limit height, width, or introduce scrolls */
+  #adin-portal-shell,
+  #adin-portal-shell > div,
+  main,
+  .mx-auto.max-w-7xl,
+  .xl\:col-span-3,
+  .overflow-x-auto {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    position: static !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: visible !important;
+  }
+
+  /* Target exact document sheets container formatting */
+  #print-sheet-paper {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important; /* fill printable sheet dynamically */
+    max-width: 100% !important;
+    /* Do not force static height in print so multi-page wraps work, or let browser size handle it */
+    height: auto !important; 
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    
+    /* Disable any active screen preview scale slider so actual print-to-pdf is high-fidelity 100% */
+    transform: none !important; 
+    transform-origin: top left !important;
+    
+    /* Force exact color graphics, logo renders, and borders as colored */
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    
+    page-break-inside: avoid;
+    page-break-after: always;
+  }
+
+  /* Ensure all nested images/logos/watermarks preserve background graphics accurately */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Clean browser headers/footers default margins out */
+  @page {
+    size: auto;
+    margin: 0mm;
+  }
+}
