@@ -8,7 +8,7 @@ interface BKPSDMDLogoProps {
 export default function BKPSDMDLogo({ className = '', size = 48 }: BKPSDMDLogoProps) {
   return (
     <div 
-      className={`flex items-center justify-center shrink-0 select-none overflow-visible ${className}`} 
+      className={`flex items-center justify-center shrink-0 select-none overflow-hidden ${className}`} 
       style={{ 
         width: size, 
         height: size, 
@@ -18,8 +18,9 @@ export default function BKPSDMDLogo({ className = '', size = 48 }: BKPSDMDLogoPr
     >
       <img
         src="/logo-ttu.png"
-        alt="Logo Kabupaten Timor Tengah Utara"
+        alt="Logo Pemerintah Kabupaten Timor Tengah Utara"
         className="w-full h-full object-contain select-none"
+        referrerPolicy="no-referrer"
         style={{ 
           width: '100%', 
           height: '100%', 
@@ -29,3 +30,5 @@ export default function BKPSDMDLogo({ className = '', size = 48 }: BKPSDMDLogoPr
     </div>
   );
 }
+
+

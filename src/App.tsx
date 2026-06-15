@@ -8,6 +8,7 @@ import { User, ASN, SuratKeterangan, SuratPanggilan, KopSurat, Permohonan } from
 import { getInitialData, saveASNList, saveKeteranganList, savePanggilanList, savePermohonanList } from './dataStore';
 
 // Screen components
+import HomeScreen from './components/HomeScreen';
 import LoginScreen from './components/LoginScreen';
 import FormulirPublikScreen from './components/FormulirPublikScreen';
 import Sidebar from './components/Sidebar';
@@ -27,7 +28,7 @@ import BerkasPemohonScreen from './components/BerkasPemohonScreen';
 export default function App() {
   // Session authentication state (Halaman 1)
   const [user, setUser] = useState<User | null>(null);
-  const [publicMode, setPublicMode] = useState<boolean>(true);
+  const [guestScreen, setGuestScreen] = useState<'landing' | 'form' | 'login'>('landing');
 
   // Database lists
   const [asnList, setAsnList] = useState<ASN[]>([]);
@@ -360,22 +361,31 @@ export default function App() {
     }
   };
 
-  // Halaman 1: Guest routing access (Formulir Publik vs Login Admin/Operator)
+  // Halaman 1: Guest routing access (Landing -> Publik Form vs Login Admin)
   if (!user) {
-    if (publicMode) {
+    if (guestScreen === 'landing') {
+      return (
+        <HomeScreen
+          onAjukanPermohonan={() => setGuestScreen('form')}
+          onLoginAdmin={() => setGuestScreen('login')}
+        />
+      );
+    }
+    if (guestScreen === 'form') {
       return (
         <FormulirPublikScreen
           onAddPermohonan={handleAddPermohonan}
           kopSurat={kopSurat}
           permohonanList={permohonanList}
-          onSelectAdminLogin={() => setPublicMode(false)}
+          onSelectAdminLogin={() => setGuestScreen('login')}
+          onBackToHome={() => setGuestScreen('landing')}
         />
       );
     }
     return (
       <LoginScreen
         onLogin={handleLogin}
-        onBackToPublic={() => setPublicMode(true)}
+        onBackToPublic={() => setGuestScreen('landing')}
       />
     );
   }

@@ -33,6 +33,7 @@ interface FormulirPublikScreenProps {
   onAddPermohonan: (pmh: Permohonan) => void;
   kopSurat: KopSurat;
   onSelectAdminLogin: () => void;
+  onBackToHome?: () => void;
   permohonanList?: Permohonan[];
 }
 
@@ -40,6 +41,7 @@ export default function FormulirPublikScreen({
   onAddPermohonan,
   kopSurat,
   onSelectAdminLogin,
+  onBackToHome,
   permohonanList = []
 }: FormulirPublikScreenProps) {
   // Navigation tab for Guest users
@@ -122,7 +124,11 @@ export default function FormulirPublikScreen({
       }
     } catch (e: any) {
       console.error(e);
-      setErrorMsg('Gagal menyambungkan Google Drive: ' + (e.message || 'Error internal Google'));
+      if (e.code === 'auth/popup-closed-by-user' || e.message?.includes('popup-closed-by-user')) {
+        setErrorMsg('Hubungkan Google Drive dibatalkan karena jendela masuk (popup) ditutup sebelum selesai.');
+      } else {
+        setErrorMsg('Gagal menyambungkan Google Drive: ' + (e.message || 'Error internal Google'));
+      }
     } finally {
       setIsLoggingInGoogle(false);
     }
@@ -302,13 +308,23 @@ export default function FormulirPublikScreen({
               <p className="text-[10px] text-slate-400">Sistem Pelayanan Disiplin Pegawai Pemerintah Kabupaten Timor Tengah Utara</p>
             </div>
           </div>
-          <button
-            onClick={onSelectAdminLogin}
-            className="flex items-center gap-2 px-4 py-2 border border-slate-700 hover:border-blue-500 bg-slate-800/50 hover:bg-slate-800 text-blue-400 hover:text-blue-300 rounded-xl text-xs font-semibold cursor-pointer transition-all shrink-0"
-          >
-            <UserCheck size={14} />
-            Portal Admin / Operator
-          </button>
+          <div className="flex items-center gap-2">
+            {onBackToHome && (
+              <button
+                onClick={onBackToHome}
+                className="flex items-center gap-1.5 px-3.5 py-2 border border-slate-700/60 hover:border-slate-600 bg-slate-800/20 hover:bg-slate-800/50 text-slate-350 hover:text-white rounded-xl text-xs font-semibold cursor-pointer transition-all"
+              >
+                ← Kembali ke Beranda
+              </button>
+            )}
+            <button
+              onClick={onSelectAdminLogin}
+              className="flex items-center gap-2 px-4 py-2 border border-slate-700 hover:border-blue-500 bg-slate-800/50 hover:bg-slate-800 text-blue-400 hover:text-blue-300 rounded-xl text-xs font-semibold cursor-pointer transition-all shrink-0"
+            >
+              <UserCheck size={14} />
+              Portal Admin / Operator
+            </button>
+          </div>
         </div>
       </header>
 
