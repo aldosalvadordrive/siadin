@@ -196,11 +196,30 @@ export default function FormulirPublikScreen({
       return;
     }
 
-    // Google Token Check
-    const activeToken = googleToken || localStorage.getItem('siadin_google_drive_token');
+    // Google Token Check or automatic background connection
+    let activeToken = googleToken || localStorage.getItem('siadin_google_drive_token');
     if (!activeToken) {
-      setErrorMsg('Fitur penyimpanan otomatis memerlukan koneksi Google Drive. Harap klik tombol "Hubungkan ke Google Drive" terlebih dahulu.');
-      return;
+      try {
+        setErrorMsg('Menghubungkan ke Google Drive secara otomatis untuk pengiriman...');
+        const { googleSignIn } = await import('../utils/googleAuth');
+        const res = await googleSignIn();
+        if (res?.accessToken) {
+          activeToken = res.accessToken;
+          setGoogleToken(res.accessToken);
+          setErrorMsg('');
+        } else {
+          setErrorMsg('Penyimpanan berkas membutuhkan koneksi Google Drive. Harap berikan izin saat jendela masuk Google ditampilkan.');
+          return;
+        }
+      } catch (e: any) {
+        console.error(e);
+        if (e.code === 'auth/popup-closed-by-user' || e.message?.includes('popup-closed-by-user')) {
+          setErrorMsg('Pengunggahan dibatalkan karena jendela verifikasi Google Drive ditutup.');
+        } else {
+          setErrorMsg('Gagal menyambungkan Google Drive secara otomatis: ' + (e.message || 'Error internal Google'));
+        }
+        return;
+      }
     }
 
     // Create Permohonan with Google Drive attachments
@@ -653,38 +672,10 @@ export default function FormulirPublikScreen({
 
                     {/* Google Drive Connection Widget */}
                     <div>
-                      {googleToken ? (
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-950/50 border border-emerald-500/30 rounded-xl">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                          <span className="text-[10px] font-bold text-emerald-400">Google Drive Aktif</span>
-                          <button
-                            type="button"
-                            onClick={handleDisconnectGoogle}
-                            className="text-[9px] font-semibold text-rose-400 hover:text-rose-300 ml-1 underline cursor-pointer"
-                          >
-                            Hubungkan Ulang
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={isLoggingInGoogle}
-                          onClick={handleConnectGoogle}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-extrabold text-[10px] rounded-xl transition-all cursor-pointer shadow-md shadow-blue-500/10"
-                        >
-                          {isLoggingInGoogle ? (
-                            <>
-                              <RefreshCw size={11} className="animate-spin" />
-                              <span>Menyambungkan...</span>
-                            </>
-                          ) : (
-                            <>
-                              <HardDrive size={11} />
-                              <span>Hubungkan ke Google Drive</span>
-                            </>
-                          )}
-                        </button>
-                      )}
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-950/40 border border-blue-500/20 rounded-xl">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="text-[10px] font-bold text-slate-300">Penyimpanan Google Drive Otomatis</span>
+                      </div>
                     </div>
                   </div>
 

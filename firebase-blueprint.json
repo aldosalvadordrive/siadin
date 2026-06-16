@@ -1,0 +1,142 @@
+{
+  "entities": {
+    "ASN": {
+      "title": "ASN",
+      "description": "Pegawai ASN BKPSDMD Kabupaten TTU",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nip": { "type": "string" },
+        "nama": { "type": "string" },
+        "jabatan": { "type": "string" },
+        "golongan": { "type": "string" },
+        "unitKerja": { "type": "string" },
+        "statusDisiplin": { "type": "string", "enum": ["Bersih", "Penyelidikan", "Disiplin Ringan", "Disiplin Sedang", "Disiplin Berat"] }
+      },
+      "required": ["id", "nip", "nama", "jabatan", "golongan", "unitKerja", "statusDisiplin"]
+    },
+    "SuratKeterangan": {
+      "title": "SuratKeterangan",
+      "description": "Surat Keterangan Tidak Pernah Dijatuhi Hukuman Disiplin",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "noSurat": { "type": "string" },
+        "asnId": { "type": "string" },
+        "jenisSurat": { "type": "string" },
+        "keperluan": { "type": "string" },
+        "tanggalSurat": { "type": "string" },
+        "penandatangan": { "type": "string" },
+        "penandatanganJabatan": { "type": "string" },
+        "penandatanganNip": { "type": "string" },
+        "status": { "type": "string", "enum": ["Draf", "Proses", "Selesai"] },
+        "customParagraf1": { "type": "string" },
+        "customParagraf2": { "type": "string" },
+        "customParagraf3": { "type": "string" },
+        "asnNama": { "type": "string" },
+        "asnNip": { "type": "string" },
+        "asnGolongan": { "type": "string" },
+        "asnJabatan": { "type": "string" },
+        "asnUnitKerja": { "type": "string" },
+        "ttdUrl": { "type": "string" },
+        "parafHierarki1": { "type": "string" },
+        "parafHierarki2": { "type": "string" },
+        "parafHierarki3": { "type": "string" }
+      },
+      "required": ["id", "noSurat", "asnId", "jenisSurat", "keperluan", "tanggalSurat", "penandatangan", "penandatanganJabatan", "status"]
+    },
+    "SuratPanggilan": {
+      "title": "SuratPanggilan",
+      "description": "Surat Panggilan Pemeriksaan Pegawai Negeri Sipil",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "noSurat": { "type": "string" },
+        "asnId": { "type": "string" },
+        "panggilanKe": { "type": "integer" },
+        "hariTanggal": { "type": "string" },
+        "jam": { "type": "string" },
+        "tempat": { "type": "string" },
+        "menghadapKepada": { "type": "string" },
+        "menghadapNip": { "type": "string" },
+        "menghadapJabatan": { "type": "string" },
+        "menghadapUnit": { "type": "string" },
+        "alasanPanggilan": { "type": "string" },
+        "tanggalSurat": { "type": "string" },
+        "penandatangan": { "type": "string" },
+        "penandatanganJabatan": { "type": "string" },
+        "status": { "type": "string", "enum": ["Draf", "Proses", "Selesai"] }
+      },
+      "required": ["id", "noSurat", "asnId", "panggilanKe", "hariTanggal", "jam", "tempat", "menghadapKepada", "alasanPanggilan", "tanggalSurat", "status"]
+    },
+    "Permohonan": {
+      "title": "Permohonan",
+      "description": "Berkas permohonan surat keterangan yang diajukan oleh ASN",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nomorPermohonan": { "type": "string" },
+        "tanggalPermohonan": { "type": "string" },
+        "nip": { "type": "string" },
+        "nama": { "type": "string" },
+        "golongan": { "type": "string" },
+        "jabatan": { "type": "string" },
+        "unitKerja": { "type": "string" },
+        "instansi": { "type": "string" },
+        "noHp": { "type": "string" },
+        "keperluan": { "type": "string" },
+        "status": { "type": "string", "enum": ["Menunggu Verifikasi", "Sedang Diproses", "Berkas Lengkap dan Siap Diproses", "Selesai", "Ditolak"] },
+        "tanggalSelesai": { "type": "string" },
+        "tanggalVerifikasi": { "type": "string" },
+        "operatorVerifikasi": { "type": "string" },
+        "skCpnsUrl": { "type": "string" },
+        "skPnsUrl": { "type": "string" },
+        "skPangkatUrl": { "type": "string" },
+        "suratPermohonanUrl": { "type": "string" },
+        "folderPemohonUrl": { "type": "string" },
+        "statusVerifikasi": { "type": "string", "enum": ["Menunggu Verifikasi", "Lengkap", "Perlu Perbaikan"] },
+        "namaFileSkCpns": { "type": "string" },
+        "namaFileSkPns": { "type": "string" },
+        "namaFileSkPangkat": { "type": "string" },
+        "namaFileSuratPermohonan": { "type": "string" }
+      },
+      "required": ["id", "nomorPermohonan", "tanggalPermohonan", "nip", "nama", "golongan", "jabatan", "unitKerja", "instansi", "noHp", "keperluan", "status"]
+    },
+    "KopSurat": {
+      "title": "KopSurat",
+      "description": "Pengaturan penulisan Kop Surat Resmi",
+      "type": "object",
+      "properties": {
+        "pemda": { "type": "string" },
+        "instansi": { "type": "string" },
+        "subInstansi": { "type": "string" },
+        "alamat": { "type": "string" },
+        "kontak": { "type": "string" },
+        "logo": { "type": "string" }
+      },
+      "required": ["pemda", "instansi", "alamat", "kontak"]
+    }
+  },
+  "firestore": {
+    "/asn/{asnId}": {
+      "schema": "ASN",
+      "description": "Collection of ASN Employee records"
+    },
+    "/sk/{skId}": {
+      "schema": "SuratKeterangan",
+      "description": "Collection of Surat Keterangan"
+    },
+    "/sp/{spId}": {
+      "schema": "SuratPanggilan",
+      "description": "Collection of Surat Panggilan"
+    },
+    "/permohonan/{permohonanId}": {
+      "schema": "Permohonan",
+      "description": "Collection of public applicant requests"
+    },
+    "/kopSurat/{kopId}": {
+      "schema": "KopSurat",
+      "description": "Configuration for letter header"
+    }
+  }
+}

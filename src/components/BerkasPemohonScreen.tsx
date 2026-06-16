@@ -31,6 +31,8 @@ export default function BerkasPemohonScreen({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('Semua');
   const [selectedPmh, setSelectedPmh] = useState<Permohonan | null>(null);
+  const [previewingPmhFiles, setPreviewingPmhFiles] = useState<Permohonan | null>(null);
+  const [activePreviewFileKey, setActivePreviewFileKey] = useState<'skCpns' | 'skPns' | 'skPangkat' | 'suratPermohonan'>('skCpns');
 
   // Filter list
   const filteredList = permohonanList.filter((pmh) => {
@@ -312,15 +314,28 @@ export default function BerkasPemohonScreen({
                       </div>
                     </div>
                     {selectedPmh.skCpnsUrl ? (
-                      <a
-                        href={selectedPmh.skCpnsUrl}
-                        target="_blank"
-                        rel="referrer noopener"
-                        className="p-1 px-2.5 bg-blue-50 text-blue-600 hover:bg-blue-105 rounded-lg border border-blue-100 text-[10px] font-bold flex items-center gap-1 whitespace-nowrap transition-colors"
-                      >
-                        Buka
-                        <ExternalLink size={10} />
-                      </a>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPreviewingPmhFiles(selectedPmh);
+                            setActivePreviewFileKey('skCpns');
+                          }}
+                          className="px-2 py-1 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white rounded-lg font-bold text-[10px] transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <Eye size={11} />
+                          <span>View</span>
+                        </button>
+                        <a
+                          href={selectedPmh.skCpnsUrl}
+                          target="_blank"
+                          rel="referrer noopener"
+                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-705 border border-slate-250 rounded-lg font-bold text-[10px] transition-colors flex items-center gap-1"
+                        >
+                          Buka
+                          <ExternalLink size={10} />
+                        </a>
+                      </div>
                     ) : (
                       <span className="text-[10px] text-slate-450 italic">Belum Ada</span>
                     )}
@@ -336,15 +351,28 @@ export default function BerkasPemohonScreen({
                       </div>
                     </div>
                     {selectedPmh.skPnsUrl ? (
-                      <a
-                        href={selectedPmh.skPnsUrl}
-                        target="_blank"
-                        rel="referrer noopener"
-                        className="p-1 px-2.5 bg-blue-50 text-blue-600 hover:bg-blue-105 rounded-lg border border-blue-100 text-[10px] font-bold flex items-center gap-1 whitespace-nowrap transition-colors"
-                      >
-                        Buka
-                        <ExternalLink size={10} />
-                      </a>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPreviewingPmhFiles(selectedPmh);
+                            setActivePreviewFileKey('skPns');
+                          }}
+                          className="px-2 py-1 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white rounded-lg font-bold text-[10px] transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <Eye size={11} />
+                          <span>View</span>
+                        </button>
+                        <a
+                          href={selectedPmh.skPnsUrl}
+                          target="_blank"
+                          rel="referrer noopener"
+                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-705 border border-slate-250 rounded-lg font-bold text-[10px] transition-colors flex items-center gap-1"
+                        >
+                          Buka
+                          <ExternalLink size={10} />
+                        </a>
+                      </div>
                     ) : (
                       <span className="text-[10px] text-slate-450 italic">Belum Ada</span>
                     )}
@@ -360,15 +388,28 @@ export default function BerkasPemohonScreen({
                       </div>
                     </div>
                     {selectedPmh.skPangkatUrl ? (
-                      <a
-                        href={selectedPmh.skPangkatUrl}
-                        target="_blank"
-                        rel="referrer noopener"
-                        className="p-1 px-2.5 bg-blue-50 text-blue-600 hover:bg-blue-105 rounded-lg border border-blue-100 text-[10px] font-bold flex items-center gap-1 whitespace-nowrap transition-colors"
-                      >
-                        Buka
-                        <ExternalLink size={10} />
-                      </a>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPreviewingPmhFiles(selectedPmh);
+                            setActivePreviewFileKey('skPangkat');
+                          }}
+                          className="px-2 py-1 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white rounded-lg font-bold text-[10px] transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <Eye size={11} />
+                          <span>View</span>
+                        </button>
+                        <a
+                          href={selectedPmh.skPangkatUrl}
+                          target="_blank"
+                          rel="referrer noopener"
+                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-705 border border-slate-250 rounded-lg font-bold text-[10px] transition-colors flex items-center gap-1"
+                        >
+                          Buka
+                          <ExternalLink size={10} />
+                        </a>
+                      </div>
                     ) : (
                       <span className="text-[10px] text-slate-450 italic">Belum Ada</span>
                     )}
@@ -384,15 +425,28 @@ export default function BerkasPemohonScreen({
                       </div>
                     </div>
                     {selectedPmh.suratPermohonanUrl ? (
-                      <a
-                        href={selectedPmh.suratPermohonanUrl}
-                        target="_blank"
-                        rel="referrer noopener"
-                        className="p-1 px-2.5 bg-blue-50 text-blue-600 hover:bg-blue-105 rounded-lg border border-blue-100 text-[10px] font-bold flex items-center gap-1 whitespace-nowrap transition-colors"
-                      >
-                        Buka
-                        <ExternalLink size={10} />
-                      </a>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPreviewingPmhFiles(selectedPmh);
+                            setActivePreviewFileKey('suratPermohonan');
+                          }}
+                          className="px-2 py-1 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white rounded-lg font-bold text-[10px] transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <Eye size={11} />
+                          <span>View</span>
+                        </button>
+                        <a
+                          href={selectedPmh.suratPermohonanUrl}
+                          target="_blank"
+                          rel="referrer noopener"
+                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-705 border border-slate-250 rounded-lg font-bold text-[10px] transition-colors flex items-center gap-1"
+                        >
+                          Buka
+                          <ExternalLink size={10} />
+                        </a>
+                      </div>
                     ) : (
                       <span className="text-[10px] text-slate-450 italic">Belum Ada</span>
                     )}
@@ -497,6 +551,218 @@ export default function BerkasPemohonScreen({
           </div>
         </div>
       )}
+      {/* PREVIEW FILES MODAL */}
+      {previewingPmhFiles && (() => {
+        const fileTabs = [
+          {
+            key: 'skCpns' as const,
+            label: '1. SK CPNS',
+            url: previewingPmhFiles.skCpnsUrl,
+            filename: previewingPmhFiles.namaFileSkCpns || 'SK_CPNS.pdf',
+            iconColor: 'text-blue-600',
+            bgColor: 'bg-blue-50/50',
+            borderColor: 'border-blue-100',
+          },
+          {
+            key: 'skPns' as const,
+            label: '2. SK PNS',
+            url: previewingPmhFiles.skPnsUrl,
+            filename: previewingPmhFiles.namaFileSkPns || 'SK_PNS.pdf',
+            iconColor: 'text-emerald-600',
+            bgColor: 'bg-emerald-50/50',
+            borderColor: 'border-emerald-100',
+          },
+          {
+            key: 'skPangkat' as const,
+            label: '3. SK Pangkat Terakhir',
+            url: previewingPmhFiles.skPangkatUrl,
+            filename: previewingPmhFiles.namaFileSkPangkat || 'SK_PANGKAT.pdf',
+            iconColor: 'text-amber-600',
+            bgColor: 'bg-amber-50/50',
+            borderColor: 'border-amber-100',
+          },
+          {
+            key: 'suratPermohonan' as const,
+            label: '4. Surat Permohonan K. BKPSDMD',
+            url: previewingPmhFiles.suratPermohonanUrl,
+            filename: previewingPmhFiles.namaFileSuratPermohonan || 'SURAT_PERMOHONAN.pdf',
+            iconColor: 'text-pink-600',
+            bgColor: 'bg-pink-50/50',
+            borderColor: 'border-pink-100',
+          },
+        ];
+
+        const activeFile = fileTabs.find(tab => tab.key === activePreviewFileKey) || fileTabs[0];
+
+        // Format direct google drive /preview url
+        const getEmbedUrl = (url: string | undefined | null) => {
+          if (!url) return '';
+          if (url.includes('drive.google.com')) {
+            let embed = url;
+            if (embed.includes('/view')) {
+              embed = embed.split('/view')[0] + '/preview';
+            } else if (!embed.endsWith('/preview')) {
+              const cleanUrl = embed.split('?')[0];
+              if (cleanUrl.endsWith('/preview')) {
+                embed = cleanUrl;
+              } else {
+                embed = cleanUrl + '/preview';
+              }
+            }
+            return embed;
+          }
+          return url;
+        };
+
+        const activeEmbedUrl = getEmbedUrl(activeFile.url);
+
+        return (
+          <div className="fixed inset-0 bg-slate-950/70 z-99 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-5xl h-[85vh] shadow-2xl flex flex-col overflow-hidden text-slate-800">
+              
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-4 text-white flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-2">
+                  <FolderOpen className="text-amber-400 animate-pulse" size={18} />
+                  <div>
+                    <h3 className="font-extrabold text-xs tracking-wide uppercase text-slate-300">Peninjau Berkas Google Drive</h3>
+                    <p className="text-[11px] text-white/90 font-mono mt-0.5">Pemohon: <span className="font-bold underline">{previewingPmhFiles.nama}</span> (NIP. {previewingPmhFiles.nip})</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setPreviewingPmhFiles(null)}
+                  className="text-slate-400 hover:text-white font-extrabold text-xs bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                >
+                  ✕ Close
+                </button>
+              </div>
+
+              {/* Modal Inner Workspace - Split Menu layout */}
+              <div className="flex-1 flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-200 overflow-hidden">
+                
+                {/* Left Sidebar Menu of the 4 files */}
+                <div className="w-full md:w-80 bg-slate-50/50 p-4 overflow-y-auto space-y-4 shrink-0 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Silakan Pilih Berkas:</span>
+                    
+                    <div className="space-y-2">
+                      {fileTabs.map((tab) => {
+                        const isActive = tab.key === activePreviewFileKey;
+                        const hasUrl = !!tab.url;
+
+                        return (
+                          <button
+                            key={tab.key}
+                            onClick={() => hasUrl && setActivePreviewFileKey(tab.key)}
+                            disabled={!hasUrl}
+                            className={`w-full text-left p-3 rounded-xl border transition-all flex items-start gap-2.5 relative ${
+                              isActive
+                                ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                                : hasUrl
+                                ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 cursor-pointer'
+                                : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-60'
+                            }`}
+                          >
+                            <FileText size={16} className={`shrink-0 ${isActive ? 'text-white' : tab.iconColor}`} />
+                            <div className="min-w-0 flex-1">
+                              <span className={`text-[11px] font-extrabold block leading-snug ${isActive ? 'text-white' : 'text-slate-800'}`}>
+                                {tab.label}
+                              </span>
+                              <span className={`text-[9.5px] block truncate mt-0.5 ${isActive ? 'text-blue-100' : 'text-slate-450'}`}>
+                                {hasUrl ? tab.filename : 'Tidak diunggah pemohon'}
+                              </span>
+                            </div>
+
+                            {/* Status Indicator bubble */}
+                            <span className="absolute right-2.5 top-2.5 flex h-2 w-2">
+                              {hasUrl ? (
+                                <span className={`relative inline-flex rounded-full h-2 w-2 ${isActive ? 'bg-white' : 'bg-green-500'}`} />
+                              ) : (
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-300" />
+                              )}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* General actions for drive folder */}
+                  <div className="bg-slate-100 border border-slate-200 rounded-xl p-3 space-y-2.5">
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none">Aksi Tambahan Folder</div>
+                    {previewingPmhFiles.folderPemohonUrl ? (
+                      <a
+                        href={previewingPmhFiles.folderPemohonUrl}
+                        target="_blank"
+                        rel="referrer noopener"
+                        className="w-full flex items-center justify-center gap-1.5 py-2 px-3 border border-blue-400 bg-blue-50 hover:bg-blue-100 text-blue-700 font-extrabold text-[10.5px] rounded-xl text-center shadow-3xs transition-all cursor-pointer"
+                      >
+                        <FolderOpen size={13} />
+                        Buka Folder G-Drive
+                        <ArrowUpRight size={10} />
+                      </a>
+                    ) : (
+                      <div className="text-[9.5px] text-slate-400 italic text-center py-1">Tautan folder tidak tersedia</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right Viewer content area */}
+                <div className="flex-1 bg-slate-100 p-4 flex flex-col overflow-hidden">
+                  {activeFile.url ? (
+                    <div className="flex-1 flex flex-col overflow-hidden bg-white border border-slate-200 rounded-xl shadow-xs">
+                      {/* Top Bar inside View Area */}
+                      <div className="bg-slate-50 border-b border-slate-200 p-2.5 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
+                        <div className="min-w-0">
+                          <span className="text-[9px] uppercase tracking-wide text-slate-400 font-bold block">Berkas Terpilih</span>
+                          <span className="text-xs font-bold text-slate-800 block truncate">{activeFile.filename}</span>
+                        </div>
+                        <a
+                          href={activeFile.url}
+                          target="_blank"
+                          rel="referrer noopener"
+                          className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-extrabold text-[10.5px] transition-colors cursor-pointer shadow-3xs"
+                        >
+                          <ExternalLink size={12} />
+                          Buka Berkas di Tab Baru
+                        </a>
+                      </div>
+
+                      {/* Embedded Preview PDF Iframe */}
+                      <div className="flex-1 relative bg-slate-300">
+                        <iframe
+                          src={activeEmbedUrl}
+                          className="absolute inset-0 w-full h-full border-none"
+                          title={activeFile.label}
+                          allow="autoplay"
+                        />
+                        {/* Underlay Info helper if iframe has issue */}
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-semibold px-4 py-2 rounded-full pointer-events-none flex items-center gap-2">
+                          <span>G-Drive Live PDF Embed. Silakan gunakan tombol kanan atas jika file gagal dimuat.</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-400 space-y-3 shadow-3xs">
+                      <div className="p-4 bg-slate-50 rounded-full text-slate-300">
+                        <FileText size={42} />
+                      </div>
+                      <div>
+                        <h4 className="font-extrabold text-slate-700 text-sm">Berkas Belum Diunggah</h4>
+                        <p className="text-[11px] text-slate-500 max-w-sm mx-auto mt-1 leading-normal">
+                          Pemohon belum mengunggah dokumen persyaratan {activeFile.label} ke sistem atau tautannya tidak sah.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

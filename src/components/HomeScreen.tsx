@@ -92,6 +92,14 @@ export default function HomeScreen({ onAjukanPermohonan, onLoginAdmin }: HomeScr
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              id="btn-login-admin-top"
+              onClick={onLoginAdmin}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 border border-slate-200 text-slate-700 rounded-xl text-xs font-extrabold cursor-pointer transition-all hover:shadow-xs shadow-3xs"
+            >
+              <UserCheck size={13} className="text-slate-500" />
+              <span>Login Admin / Operator</span>
+            </button>
           </div>
         </div>
       </nav>

@@ -90,8 +90,10 @@ export interface Permohonan {
   instansi: string;
   noHp: string;
   keperluan: string;
-  status: 'Menunggu Verifikasi' | 'Sedang Diproses' | 'Selesai' | 'Ditolak';
+  status: 'Menunggu Verifikasi' | 'Sedang Diproses' | 'Berkas Lengkap dan Siap Diproses' | 'Selesai' | 'Ditolak';
   tanggalSelesai?: string;
+  tanggalVerifikasi?: string;
+  operatorVerifikasi?: string;
   
   // Google Drive Uploads & Verification Fields
   skCpnsUrl?: string;

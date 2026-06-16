@@ -3,6 +3,7 @@
   "appId": "1:815827737856:web:0e6b2cad9fc08e339d27e5",
   "apiKey": "AIzaSyA_PgVgoEYnLFgyBoVj1pXnvXSVQnA6c4M",
   "authDomain": "winged-bongo-ttpfc.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-12e11dd7-b89c-4933-a4ef-8993d8589ee3",
   "storageBucket": "winged-bongo-ttpfc.firebasestorage.app",
   "messagingSenderId": "815827737856",
   "measurementId": ""

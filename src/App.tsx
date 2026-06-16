@@ -5,7 +5,22 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, ASN, SuratKeterangan, SuratPanggilan, KopSurat, Permohonan } from './types';
-import { getInitialData, saveASNList, saveKeteranganList, savePanggilanList, savePermohonanList } from './dataStore';
+import { 
+  seedInitialDataIfEmpty, 
+  testConnection, 
+  saveASN, 
+  deleteASN, 
+  saveSK, 
+  deleteSK, 
+  saveSP, 
+  deleteSP, 
+  savePermohonan, 
+  saveKopSurat,
+  handleFirestoreError,
+  OperationType 
+} from './firebaseStore';
+import { db } from './firebase';
+import { onSnapshot, collection } from 'firebase/firestore';
 
 // Screen components
 import HomeScreen from './components/HomeScreen';
@@ -55,37 +70,80 @@ export default function App() {
 
   // Initialize store dataset
   useEffect(() => {
-    const { asnList: dASN, skList: dSK, spList: dSP, permohonanList: dPMH } = getInitialData();
-    setAsnList(dASN);
-    setSkList(dSK);
-    setSpList(dSP);
-    setPermohonanList(dPMH);
+    // 1. Validate connection
+    testConnection();
 
-    // Load KopSurat
-    const storedKop = localStorage.getItem('siadin_kop_surat');
-    if (storedKop) {
-      try {
-        setKopSurat(JSON.parse(storedKop));
-      } catch (e) {}
-    } else {
-      localStorage.setItem('siadin_kop_surat', JSON.stringify({
-        pemda: 'PEMERINTAH KABUPATEN TIMOR TENGAH UTARA',
-        instansi: 'SEKRETARIAT DAERAH',
-        subInstansi: '',
-        alamat: 'Jalan Basuki Rahmat No. 03, Kefamenanu - NTT, Kode Pos 85612',
-        kontak: 'Laman Web: setda.ttukab.go.id | Email: setda.ttu@gmail.com'
-      }));
-    }
+    let unsubscribeAsn = () => {};
+    let unsubscribeSk = () => {};
+    let unsubscribeSp = () => {};
+    let unsubscribePermohonan = () => {};
+    let unsubscribeKop = () => {};
 
-    // Auto load current session user from localStorage if any
-    const storedSession = localStorage.getItem('siadin_session_user');
-    if (storedSession) {
-      try {
-        setUser(JSON.parse(storedSession));
-      } catch (e) {
-        localStorage.removeItem('siadin_session_user');
-      }
-    }
+    // 2. Seed data if firestore is empty
+    seedInitialDataIfEmpty().then(() => {
+      // 3. Register real-time listeners
+      unsubscribeAsn = onSnapshot(collection(db, 'asn'), (snapshot) => {
+        const list: ASN[] = [];
+        snapshot.forEach((doc) => {
+          list.push(doc.data() as ASN);
+        });
+        setAsnList(list);
+      }, (err) => {
+        handleFirestoreError(err, OperationType.LIST, 'asn');
+      });
+
+      unsubscribeSk = onSnapshot(collection(db, 'sk'), (snapshot) => {
+        const list: SuratKeterangan[] = [];
+        snapshot.forEach((doc) => {
+          list.push(doc.data() as SuratKeterangan);
+        });
+        setSkList(list);
+      }, (err) => {
+        handleFirestoreError(err, OperationType.LIST, 'sk');
+      });
+
+      unsubscribeSp = onSnapshot(collection(db, 'sp'), (snapshot) => {
+        const list: SuratPanggilan[] = [];
+        snapshot.forEach((doc) => {
+          list.push(doc.data() as SuratPanggilan);
+        });
+        setSpList(list);
+      }, (err) => {
+        handleFirestoreError(err, OperationType.LIST, 'sp');
+      });
+
+      unsubscribePermohonan = onSnapshot(collection(db, 'permohonan'), (snapshot) => {
+        const list: Permohonan[] = [];
+        snapshot.forEach((doc) => {
+          list.push(doc.data() as Permohonan);
+        });
+        // Sort descending: newest first by id
+        list.sort((a, b) => b.id.localeCompare(a.id));
+        setPermohonanList(list);
+      }, (err) => {
+        handleFirestoreError(err, OperationType.LIST, 'permohonan');
+      });
+
+      unsubscribeKop = onSnapshot(collection(db, 'kopSurat'), (snapshot) => {
+        snapshot.forEach((doc) => {
+          if (doc.id === 'default') {
+            setKopSurat(doc.data() as KopSurat);
+          }
+        });
+      }, (err) => {
+        handleFirestoreError(err, OperationType.LIST, 'kopSurat');
+      });
+    }).catch(err => {
+      console.error('Error initializing data store:', err);
+    });
+
+    return () => {
+      unsubscribeAsn();
+      unsubscribeSk();
+      unsubscribeSp();
+      unsubscribePermohonan();
+      unsubscribeKop();
+    };
   }, []);
 
   const handleLogin = (newUser: User) => {
@@ -97,70 +155,67 @@ export default function App() {
     setUser(null);
     localStorage.removeItem('siadin_session_user');
     setActiveTab('dashboard');
+    setGuestScreen('landing');
   };
 
   // List modifier handlers
   const handleAddASN = (newAsn: ASN) => {
-    const updated = [newAsn, ...asnList];
-    setAsnList(updated);
-    saveASNList(updated);
+    saveASN(newAsn);
   };
 
   const handleUpdateASN = (updatedAsn: ASN) => {
-    const updated = asnList.map((asn) => (asn.id === updatedAsn.id ? updatedAsn : asn));
-    setAsnList(updated);
-    saveASNList(updated);
+    saveASN(updatedAsn);
   };
 
   const handleDeleteASN = (id: string) => {
-    const updated = asnList.filter((asn) => asn.id !== id);
-    setAsnList(updated);
-    saveASNList(updated);
+    deleteASN(id);
   };
 
   const handleAddKeterangan = (newSk: SuratKeterangan) => {
-    const updated = [newSk, ...skList];
-    setSkList(updated);
-    saveKeteranganList(updated);
+    saveSK(newSk);
   };
 
   const handleAddPanggilan = (newSp: SuratPanggilan) => {
-    const updated = [newSp, ...spList];
-    setSpList(updated);
-    savePanggilanList(updated);
+    saveSP(newSp);
   };
 
   const handleAddPermohonan = (newPmh: Permohonan) => {
-    const updated = [newPmh, ...permohonanList];
-    setPermohonanList(updated);
-    savePermohonanList(updated);
+    savePermohonan(newPmh);
   };
 
   const handleUpdatePermohonanStatus = (id: string, status: Permohonan['status']) => {
-    const updated = permohonanList.map((pmh) => {
-      if (pmh.id === id) {
-        return {
-          ...pmh,
-          status,
-          tanggalSelesai: status === 'Selesai' ? new Date().toISOString().split('T')[0] : pmh.tanggalSelesai
-        };
-      }
-      return pmh;
-    });
-    setPermohonanList(updated);
-    savePermohonanList(updated);
+    const found = permohonanList.find(p => p.id === id);
+    if (found) {
+      const updated = {
+        ...found,
+        status,
+        tanggalSelesai: status === 'Selesai' ? new Date().toISOString().split('T')[0] : (found.tanggalSelesai || '')
+      };
+      savePermohonan(updated);
+    }
   };
 
   const handleUpdatePermohonan = (updatedPmh: Permohonan) => {
-    const updated = permohonanList.map((p) => p.id === updatedPmh.id ? updatedPmh : p);
-    setPermohonanList(updated);
-    savePermohonanList(updated);
+    savePermohonan(updatedPmh);
   };
 
   const handleGenerateKeteranganFromPermohonan = (pmh: Permohonan) => {
-    // 1. Check if ASN already exists by NIP
-    let existingAsn = asnList.find(a => a.nip === pmh.nip);
-    if (!existingAsn) {
+    // Helper to normalize NIP strings (remove all spaces)
+    const normalizeNip = (str: string) => str ? str.replace(/\s/g, '') : '';
+    const pmhNipClean = normalizeNip(pmh.nip);
+
+    // 1. Check if ASN already exists by NIP (normalized)
+    let existingAsn = asnList.find(a => normalizeNip(a.nip) === pmhNipClean);
+
+    if (existingAsn) {
+      // Update ASN details with latest data from the permohonan form to prevent stale/incorrect information
+      existingAsn.nama = pmh.nama;
+      existingAsn.golongan = pmh.golongan;
+      existingAsn.jabatan = pmh.jabatan;
+      existingAsn.unitKerja = pmh.unitKerja;
+
+      saveASN(existingAsn);
+    } else {
       // Create and save new ASN so they exist officially
       const newAsn: ASN = {
         id: `asn-${Date.now()}`,
@@ -172,9 +227,7 @@ export default function App() {
         statusDisiplin: 'Bersih'
       };
       
-      const updatedAsnList = [newAsn, ...asnList];
-      setAsnList(updatedAsnList);
-      saveASNList(updatedAsnList);
+      saveASN(newAsn);
       existingAsn = newAsn;
     }
 
@@ -182,18 +235,23 @@ export default function App() {
     let existingSk = skList.find(sk => sk.asnId === existingAsn?.id && sk.keperluan === pmh.keperluan);
     
     if (existingSk) {
-      // Force update existing SK to ensure it strictly uses the correct template fields
+      // Force update existing SK to ensure it strictly uses the correct template fields and newest data
       existingSk.jenisSurat = 'Surat Keterangan Tidak Pernah Dijatuhi Hukuman Disiplin';
       existingSk.penandatangan = 'TRINIMUS OLIN, S.KOM., M.T';
       existingSk.penandatanganJabatan = 'Plh. Sekretaris Daerah';
       existingSk.penandatanganNip = '19790507 200212 1 006';
       existingSk.customParagraf1 = 'Yang bertanda tangan di bawah ini :';
       existingSk.customParagraf2 = 'dalam 1 (satu) tahun terakhir tidak pernah dijatuhi hukuman disiplin tingkat sedang/berat.';
-      existingSk.customParagraf3 = 'Demikian Surat Pernyataan ini saya buat dengan sesungguhnya dengan mengingat sumpah jabatan dan apabila dikemudian hari ternyata isi surat Pernyataan ini tidak benar yang mengakibatkan kerugian bagi Negara, maka saya bersedia menanggung kerugian tersebut.';
+      existingSk.customParagraf3 = 'Demikian Surat Pernyataan ini saya buat dengan sesungguhnya dengan mengingat sumpah jabatan and apabila dikemudian hari ternyata isi surat Pernyataan ini tidak benar yang mengakibatkan kerugian bagi Negara, maka saya bersedia menanggung kerugian tersebut.';
       
-      const updatedSkList = skList.map(sk => sk.id === existingSk?.id ? existingSk : sk);
-      setSkList(updatedSkList);
-      saveKeteranganList(updatedSkList);
+      // Update target employee details with permohonan data
+      existingSk.asnNama = pmh.nama;
+      existingSk.asnNip = pmh.nip;
+      existingSk.asnGolongan = pmh.golongan;
+      existingSk.asnJabatan = pmh.jabatan;
+      existingSk.asnUnitKerja = pmh.unitKerja;
+
+      saveSK(existingSk);
     } else {
       // Generate unique nomor surat
       const randomizeNumber = Math.floor(100 + Math.random() * 90);
@@ -210,19 +268,17 @@ export default function App() {
         penandatanganJabatan: 'Plh. Sekretaris Daerah',
         penandatanganNip: '19790507 200212 1 006',
         status: 'Selesai',
-        asnNama: existingAsn.nama,
-        asnNip: existingAsn.nip,
-        asnGolongan: existingAsn.golongan,
-        asnJabatan: existingAsn.jabatan,
-        asnUnitKerja: existingAsn.unitKerja,
+        asnNama: pmh.nama,
+        asnNip: pmh.nip,
+        asnGolongan: pmh.golongan,
+        asnJabatan: pmh.jabatan,
+        asnUnitKerja: pmh.unitKerja,
         customParagraf1: 'Yang bertanda tangan di bawah ini :',
         customParagraf2: 'dalam 1 (satu) tahun terakhir tidak pernah dijatuhi hukuman disiplin tingkat sedang/berat.',
         customParagraf3: 'Demikian Surat Pernyataan ini saya buat dengan sesungguhnya dengan mengingat sumpah jabatan dan apabila dikemudian hari ternyata isi surat Pernyataan ini tidak benar yang mengakibatkan kerugian bagi Negara, maka saya bersedia menanggung kerugian tersebut.'
       };
       
-      const updatedSkList = [newSk, ...skList];
-      setSkList(updatedSkList);
-      saveKeteranganList(updatedSkList);
+      saveSK(newSk);
       existingSk = newSk;
     }
 
@@ -234,13 +290,9 @@ export default function App() {
 
   const handleDeleteDocument = (id: string, type: 'Keterangan' | 'Panggilan') => {
     if (type === 'Keterangan') {
-      const updated = skList.filter((sk) => sk.id !== id);
-      setSkList(updated);
-      saveKeteranganList(updated);
+      deleteSK(id);
     } else {
-      const updated = spList.filter((sp) => sp.id !== id);
-      setSpList(updated);
-      savePanggilanList(updated);
+      deleteSP(id);
     }
 
     if (selectedDocId === id) {
@@ -260,8 +312,15 @@ export default function App() {
   };
 
   const handleUpdateKopSurat = (newKop: KopSurat) => {
-    setKopSurat(newKop);
-    localStorage.setItem('siadin_kop_surat', JSON.stringify(newKop));
+    saveKopSurat(newKop);
+  };
+
+  const handleUpdateSk = (updatedSk: SuratKeterangan) => {
+    saveSK(updatedSk);
+  };
+
+  const handleUpdateSp = (updatedSp: SuratPanggilan) => {
+    saveSP(updatedSp);
   };
 
   // Render correct nested screen
@@ -275,6 +334,8 @@ export default function App() {
             spList={spList}
             permohonanList={permohonanList}
             onUpdatePermohonanStatus={handleUpdatePermohonanStatus}
+            onUpdatePermohonan={handleUpdatePermohonan}
+            user={user}
             onNavigate={setActiveTab}
             onSelectDocumentForPreview={handleSelectDocumentForPreview}
             onGenerateKeteranganFromPermohonan={handleGenerateKeteranganFromPermohonan}
@@ -339,6 +400,8 @@ export default function App() {
             selectedDocumentId={selectedDocId}
             selectedDocumentType={selectedDocType}
             kopSurat={kopSurat}
+            onUpdateSk={handleUpdateSk}
+            onUpdateSp={handleUpdateSp}
           />
         );
       case 'kelola-admin':

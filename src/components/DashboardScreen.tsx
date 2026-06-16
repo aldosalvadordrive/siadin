@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ASN, SuratKeterangan, SuratPanggilan, DocumentHistory, Permohonan } from '../types';
+import { ASN, SuratKeterangan, SuratPanggilan, DocumentHistory, Permohonan, User } from '../types';
 import {
   Users,
   FileCheck,
@@ -25,7 +25,8 @@ import {
   Filter,
   Eye,
   Calendar,
-  Printer
+  Printer,
+  FolderOpen
 } from 'lucide-react';
 
 interface DashboardScreenProps {
@@ -34,6 +35,8 @@ interface DashboardScreenProps {
   spList: SuratPanggilan[];
   permohonanList: Permohonan[];
   onUpdatePermohonanStatus: (id: string, status: Permohonan['status']) => void;
+  onUpdatePermohonan?: (updated: Permohonan) => void;
+  user?: User | null;
   onNavigate: (tab: string) => void;
   onSelectDocumentForPreview: (id: string, type: 'Keterangan' | 'Panggilan') => void;
   onGenerateKeteranganFromPermohonan?: (pmh: Permohonan) => void;
@@ -45,6 +48,8 @@ export default function DashboardScreen({
   spList,
   permohonanList = [],
   onUpdatePermohonanStatus,
+  onUpdatePermohonan,
+  user,
   onNavigate,
   onSelectDocumentForPreview,
   onGenerateKeteranganFromPermohonan,
@@ -63,12 +68,14 @@ export default function DashboardScreen({
   // Permohonan Stats
   const totalPermohonan = permohonanList.length;
   const pmhMenunggu = permohonanList.filter((p) => p.status === 'Menunggu Verifikasi').length;
-  const pmhProses = permohonanList.filter((p) => p.status === 'Sedang Diproses').length;
+  const pmhProses = permohonanList.filter((p) => p.status === 'Sedang Diproses' || p.status === 'Berkas Lengkap dan Siap Diproses').length;
   const pmhSelesai = permohonanList.filter((p) => p.status === 'Selesai').length;
   const pmhDitolak = permohonanList.filter((p) => p.status === 'Ditolak').length;
 
   // Selected Permohonan for detailed modal
   const [selectedPmh, setSelectedPmh] = useState<Permohonan | null>(null);
+  const [previewingPmhFiles, setPreviewingPmhFiles] = useState<Permohonan | null>(null);
+  const [activePreviewFileKey, setActivePreviewFileKey] = useState<'skCpns' | 'skPns' | 'skPangkat' | 'suratPermohonan'>('skCpns');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('Semua');
@@ -273,10 +280,11 @@ export default function DashboardScreen({
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 px-2 py-1.5 focus:outline-none"
+              className="bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 px-2 py-1.5 focus:outline-none cursor-pointer"
             >
               <option value="Semua">Semua Status</option>
               <option value="Menunggu Verifikasi">Menunggu Verifikasi</option>
+              <option value="Berkas Lengkap dan Siap Diproses">Berkas Lengkap dan Siap Diproses</option>
               <option value="Sedang Diproses">Sedang Diproses</option>
               <option value="Selesai">Selesai</option>
               <option value="Ditolak">Ditolak</option>
@@ -288,84 +296,172 @@ export default function DashboardScreen({
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-left">
             <thead>
-              <tr className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                <th className="px-3 py-2.5">No. Permohonan</th>
-                <th className="px-3 py-2.5">Tanggal</th>
-                <th className="px-3 py-2.5">Pemohon</th>
-                <th className="px-3 py-2.5">Unit Kerja / Instansi</th>
-                <th className="px-3 py-2.5">Nomor HP (WA)</th>
-                <th className="px-3 py-2.5">Status</th>
-                <th className="px-3 py-2.5 text-center">Operasi Status</th>
-                <th className="px-3 py-2.5 text-right">Aksi</th>
+              <tr className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                <th className="px-4 py-3">Nama Pemohon</th>
+                <th className="px-4 py-3">Jenis Surat</th>
+                <th className="px-4 py-3">Tanggal Permohonan</th>
+                <th className="px-4 py-3 text-center">Berkas</th>
+                <th className="px-4 py-3 text-center">Verifikasi</th>
+                <th className="px-4 py-3 text-right">Cetak</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-              {filteredPermohonan.map((pmh) => (
-                <tr key={pmh.id} className={`hover:bg-slate-50 transition-colors ${pmh.status === 'Menunggu Verifikasi' ? 'bg-amber-50/20' : ''}`}>
-                  <td className="px-3 py-3 font-mono font-bold text-slate-900">
-                    {pmh.nomorPermohonan}
-                  </td>
-                  <td className="px-3 py-3 text-slate-500 font-mono text-[10px]">
-                    {pmh.tanggalPermohonan}
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="font-bold text-slate-900">{pmh.nama}</div>
-                    <div className="text-[10px] text-slate-400 font-mono">{pmh.nip}</div>
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="max-w-[180px] truncate font-medium text-slate-800">{pmh.unitKerja}</div>
-                    <div className="text-[10px] text-slate-400 truncate">{pmh.instansi}</div>
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="flex items-center gap-1.5">
-                      <Phone size={11} className="text-teal-500" />
-                      <span className="font-bold text-slate-800">{pmh.noHp}</span>
-                    </div>
-                  </td>
-                  <td className="px-3 py-3">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
-                      pmh.status === 'Menunggu Verifikasi' ? 'bg-amber-100 text-amber-800' :
-                      pmh.status === 'Sedang Diproses' ? 'bg-blue-100 text-blue-800 font-semibold' :
-                      pmh.status === 'Selesai' ? 'bg-emerald-150 text-emerald-800' :
-                      'bg-rose-100 text-rose-800'
-                    }`}>
-                      <span className={`w-1 h-1 rounded-full ${
-                        pmh.status === 'Menunggu Verifikasi' ? 'bg-amber-500' :
-                        pmh.status === 'Sedang Diproses' ? 'bg-blue-500' :
-                        pmh.status === 'Selesai' ? 'bg-emerald-500' :
-                        'bg-rose-500'
-                      }`}></span>
-                      {pmh.status}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <select
-                        value={pmh.status}
-                        onChange={(e) => onUpdatePermohonanStatus(pmh.id, e.target.value as Permohonan['status'])}
-                        className="bg-white border border-slate-200 text-[10px] font-bold py-1 px-1.5 rounded-md text-slate-700 hover:border-slate-350 focus:outline-none cursor-pointer"
-                      >
-                        <option value="Menunggu Verifikasi">Verifikasi</option>
-                        <option value="Sedang Diproses">Proses</option>
-                        <option value="Selesai">Selesai</option>
-                        <option value="Ditolak">Ditolak</option>
-                      </select>
-                    </div>
-                  </td>
-                  <td className="px-3 py-3 text-right">
-                    <button
-                      onClick={() => setSelectedPmh(pmh)}
-                      className="inline-flex items-center gap-1 bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold transition-all border border-blue-100 cursor-pointer text-[10px]"
-                    >
-                      <Eye size={12} />
-                      Detail
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {filteredPermohonan.map((pmh) => {
+                const isLengkap = pmh.status === 'Berkas Lengkap dan Siap Diproses';
+                const handleToggleVerifikasi = (p: Permohonan) => {
+                  if (!onUpdatePermohonan) return;
+                  const currentlyLengkap = p.status === 'Berkas Lengkap dan Siap Diproses';
+                  const updatedStatus = currentlyLengkap ? 'Menunggu Verifikasi' : 'Berkas Lengkap dan Siap Diproses';
+                  const updatedVerif = currentlyLengkap ? 'Menunggu Verifikasi' : 'Lengkap';
+                  const updated: Permohonan = {
+                    ...p,
+                    status: updatedStatus,
+                    statusVerifikasi: updatedVerif as any,
+                    tanggalVerifikasi: currentlyLengkap ? undefined : new Date().toLocaleDateString('id-ID'),
+                    operatorVerifikasi: currentlyLengkap ? undefined : (user?.nama || 'Operator BKPSDMD')
+                  };
+                  onUpdatePermohonan(updated);
+                };
+
+                return (
+                  <tr key={pmh.id} className={`hover:bg-slate-50/70 transition-colors ${pmh.status === 'Menunggu Verifikasi' ? 'bg-amber-50/20' : ''} ${isLengkap ? 'bg-emerald-50/10' : ''}`}>
+                    <td className="px-4 py-3.5">
+                      <div className="font-extrabold text-slate-900 text-[13px]">{pmh.nama}</div>
+                      <div className="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center gap-1.5">
+                        <span className="font-bold text-slate-500">NIP: {pmh.nip}</span>
+                        <span>•</span>
+                        <span className="italic">{pmh.nomorPermohonan}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-slate-800">
+                      <div className="font-bold text-xs">Surat Keterangan</div>
+                      <div className="text-[10px] text-slate-400 font-medium">Bebas Hukuman Disiplin</div>
+                    </td>
+                    <td className="px-4 py-3.5 text-slate-500 font-mono text-xs">
+                      {pmh.tanggalPermohonan}
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <div className="flex items-center justify-center gap-1 flex-wrap max-w-[200px] mx-auto">
+                        <button
+                          onClick={() => {
+                            setPreviewingPmhFiles(pmh);
+                            setActivePreviewFileKey('skCpns');
+                          }}
+                          disabled={!pmh.skCpnsUrl}
+                          className={`px-1.5 py-1 rounded text-[9.5px] font-extrabold transition-all duration-150 flex items-center gap-0.5 border ${
+                            pmh.skCpnsUrl
+                              ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:border-blue-300 cursor-pointer'
+                              : 'bg-slate-50 border-slate-105 text-slate-350 cursor-not-allowed opacity-40'
+                          }`}
+                          title={pmh.skCpnsUrl ? "View SK CPNS" : "SK CPNS tidak diunggah"}
+                        >
+                          <Eye size={10} />
+                          <span>CPNS</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setPreviewingPmhFiles(pmh);
+                            setActivePreviewFileKey('skPns');
+                          }}
+                          disabled={!pmh.skPnsUrl}
+                          className={`px-1.5 py-1 rounded text-[9.5px] font-extrabold transition-all duration-150 flex items-center gap-0.5 border ${
+                            pmh.skPnsUrl
+                              ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 cursor-pointer'
+                              : 'bg-slate-50 border-slate-105 text-slate-350 cursor-not-allowed opacity-40'
+                          }`}
+                          title={pmh.skPnsUrl ? "View SK PNS" : "SK PNS tidak diunggah"}
+                        >
+                          <Eye size={10} />
+                          <span>PNS</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setPreviewingPmhFiles(pmh);
+                            setActivePreviewFileKey('skPangkat');
+                          }}
+                          disabled={!pmh.skPangkatUrl}
+                          className={`px-1.5 py-1 rounded text-[9.5px] font-extrabold transition-all duration-150 flex items-center gap-0.5 border ${
+                            pmh.skPangkatUrl
+                              ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 hover:border-amber-300 cursor-pointer'
+                              : 'bg-slate-50 border-slate-105 text-slate-350 cursor-not-allowed opacity-40'
+                          }`}
+                          title={pmh.skPangkatUrl ? "View SK Pangkat Terakhir" : "SK Pangkat tidak diunggah"}
+                        >
+                          <Eye size={10} />
+                          <span>Pangkat</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setPreviewingPmhFiles(pmh);
+                            setActivePreviewFileKey('suratPermohonan');
+                          }}
+                          disabled={!pmh.suratPermohonanUrl}
+                          className={`px-1.5 py-1 rounded text-[9.5px] font-extrabold transition-all duration-150 flex items-center gap-0.5 border ${
+                            pmh.suratPermohonanUrl
+                              ? 'bg-pink-50 border-pink-200 text-pink-700 hover:bg-pink-100 hover:border-pink-300 cursor-pointer'
+                              : 'bg-slate-50 border-slate-105 text-slate-350 cursor-not-allowed opacity-40'
+                          }`}
+                          title={pmh.suratPermohonanUrl ? "View Surat Permohonan Kepala BKPSDMD" : "Surat Permohonan tidak diunggah"}
+                        >
+                          <Eye size={10} />
+                          <span>Pmh</span>
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex flex-col items-center justify-center">
+                        <button
+                          onClick={() => handleToggleVerifikasi(pmh)}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-extrabold border transition-all cursor-pointer ${
+                            isLengkap
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-805 hover:bg-emerald-100'
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          <span className={`w-3.5 h-3.5 border rounded flex items-center justify-center shrink-0 transition-colors ${
+                            isLengkap ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-350 bg-white'
+                          }`}>
+                            {isLengkap && <Check size={11} strokeWidth={3} />}
+                          </span>
+                          <span>{isLengkap ? 'Berkas Lengkap' : 'Berkas Belum Lengkap'}</span>
+                        </button>
+                        {isLengkap && pmh.tanggalVerifikasi && (
+                          <div className="text-[9px] text-emerald-600 font-semibold text-center mt-1 leading-none">
+                            <span>Selesai: {pmh.tanggalVerifikasi}</span>
+                            {pmh.operatorVerifikasi && <span className="block mt-0.5 text-[8.5px] italic text-slate-400">Oleh: {pmh.operatorVerifikasi}</span>}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          disabled={!isLengkap}
+                          onClick={() => onGenerateKeteranganFromPermohonan?.(pmh)}
+                          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg font-extrabold text-[11px] transition-all ${
+                            isLengkap
+                              ? 'bg-blue-600 hover:bg-blue-500 text-white cursor-pointer hover:shadow-xs'
+                              : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                          }`}
+                        >
+                          <Printer size={12} />
+                          <span>Cetak Dokumen</span>
+                        </button>
+                        <button
+                          onClick={() => setSelectedPmh(pmh)}
+                          className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                          title="Detail Berkas"
+                        >
+                          <Eye size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               {filteredPermohonan.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-10 text-slate-400 italic">
+                  <td colSpan={6} className="text-center py-10 text-slate-400 italic">
                     Tidak ditemukan data permohonan yang sesuai filter.
                   </td>
                 </tr>
@@ -584,6 +680,55 @@ export default function DashboardScreen({
                 </div>
               </div>
 
+              {/* DAFTAR BERKAS DOKUMEN PERSYARATAN */}
+              <div className="space-y-2 border-t border-slate-150 pt-2 pb-1">
+                <span className="font-extrabold text-slate-705 block text-[11px] uppercase tracking-wider">📁 Dokumen Persyaratan Pemohon (G-Drive)</span>
+                <div className="grid grid-cols-1 gap-1.5">
+                  {[
+                    { key: 'skCpns', name: '1. SK CPNS', url: selectedPmh.skCpnsUrl, filename: selectedPmh.namaFileSkCpns || 'SK_CPNS.pdf', color: 'text-blue-600' },
+                    { key: 'skPns', name: '2. SK PNS', url: selectedPmh.skPnsUrl, filename: selectedPmh.namaFileSkPns || 'SK_PNS.pdf', color: 'text-emerald-600' },
+                    { key: 'skPangkat', name: '3. SK Pangkat Terakhir', url: selectedPmh.skPangkatUrl, filename: selectedPmh.namaFileSkPangkat || 'SK_PANGKAT.pdf', color: 'text-amber-600' },
+                    { key: 'suratPermohonan', name: '4. Surat Permohonan K. BKPSDMD', url: selectedPmh.suratPermohonanUrl, filename: selectedPmh.namaFileSuratPermohonan || 'SURAT_PERMOHONAN.pdf', color: 'text-pink-600' }
+                  ].map((doc) => (
+                    <div key={doc.key} className="flex items-center justify-between p-2 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100/50 transition-colors">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText size={14} className={`${doc.color} shrink-0`} />
+                        <div className="min-w-0">
+                          <span className="text-[10.5px] font-bold text-slate-800 block leading-tight">{doc.name}</span>
+                          <span className="text-[9.5px] text-slate-400 block truncate">{doc.filename}</span>
+                        </div>
+                      </div>
+                      {doc.url ? (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPreviewingPmhFiles(selectedPmh);
+                              setActivePreviewFileKey(doc.key as any);
+                            }}
+                            className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-[10px] transition-colors flex items-center gap-1 cursor-pointer font-sans"
+                          >
+                            <Eye size={10} />
+                            <span>View</span>
+                          </button>
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="referrer noopener"
+                            className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-705 border border-slate-250 rounded-lg font-bold text-[10px] transition-colors flex items-center gap-1 font-sans"
+                          >
+                            Buka
+                            <ExternalLink size={10} />
+                          </a>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-slate-405 italic font-medium">Belum diunggah</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Status Manager interface controls */}
               <div className="space-y-1.5 pt-1">
                 <span className="font-bold text-slate-700 block text-[11px]">KONTROL DAN UBAH STATUS PERMOHONAN:</span>
@@ -740,6 +885,220 @@ export default function DashboardScreen({
           </div>
         </div>
       )}
+
+      {/* PREVIEW FILES MODAL */}
+      {previewingPmhFiles && (() => {
+        const fileTabs = [
+          {
+            key: 'skCpns' as const,
+            label: '1. SK CPNS',
+            url: previewingPmhFiles.skCpnsUrl,
+            filename: previewingPmhFiles.namaFileSkCpns || 'SK_CPNS.pdf',
+            iconColor: 'text-blue-600',
+            bgColor: 'bg-blue-50/50',
+            borderColor: 'border-blue-100',
+          },
+          {
+            key: 'skPns' as const,
+            label: '2. SK PNS',
+            url: previewingPmhFiles.skPnsUrl,
+            filename: previewingPmhFiles.namaFileSkPns || 'SK_PNS.pdf',
+            iconColor: 'text-emerald-600',
+            bgColor: 'bg-emerald-50/50',
+            borderColor: 'border-emerald-100',
+          },
+          {
+            key: 'skPangkat' as const,
+            label: '3. SK Pangkat Terakhir',
+            url: previewingPmhFiles.skPangkatUrl,
+            filename: previewingPmhFiles.namaFileSkPangkat || 'SK_PANGKAT.pdf',
+            iconColor: 'text-amber-600',
+            bgColor: 'bg-amber-50/50',
+            borderColor: 'border-amber-100',
+          },
+          {
+            key: 'suratPermohonan' as const,
+            label: '4. Surat Permohonan K. BKPSDMD',
+            url: previewingPmhFiles.suratPermohonanUrl,
+            filename: previewingPmhFiles.namaFileSuratPermohonan || 'SURAT_PERMOHONAN.pdf',
+            iconColor: 'text-pink-600',
+            bgColor: 'bg-pink-50/50',
+            borderColor: 'border-pink-100',
+          },
+        ];
+
+        const activeFile = fileTabs.find(tab => tab.key === activePreviewFileKey) || fileTabs[0];
+
+        // Format direct google drive /preview url
+        const getEmbedUrl = (url: string | undefined | null) => {
+          if (!url) return '';
+          if (url.includes('drive.google.com')) {
+            let embed = url;
+            if (embed.includes('/view')) {
+              embed = embed.split('/view')[0] + '/preview';
+            } else if (!embed.endsWith('/preview')) {
+              const cleanUrl = embed.split('?')[0];
+              if (cleanUrl.endsWith('/preview')) {
+                embed = cleanUrl;
+              } else {
+                embed = cleanUrl + '/preview';
+              }
+            }
+            return embed;
+          }
+          return url;
+        };
+
+        const activeEmbedUrl = getEmbedUrl(activeFile.url);
+
+        return (
+          <div className="fixed inset-0 bg-slate-950/70 z-99 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-5xl h-[85vh] shadow-2xl flex flex-col overflow-hidden text-slate-800">
+              
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-4 text-white flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-2">
+                  <FolderOpen className="text-amber-400 animate-pulse" size={18} />
+                  <div>
+                    <h3 className="font-extrabold text-xs tracking-wide uppercase text-slate-300">Peninjau Berkas Google Drive</h3>
+                    <p className="text-[11px] text-white/90 font-mono mt-0.5">Pemohon: <span className="font-bold underline">{previewingPmhFiles.nama}</span> (NIP. {previewingPmhFiles.nip})</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setPreviewingPmhFiles(null)}
+                  className="text-slate-400 hover:text-white font-extrabold text-xs bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                >
+                  ✕ Close
+                </button>
+              </div>
+
+              {/* Modal Inner Workspace - Split Menu layout */}
+              <div className="flex-1 flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-200 overflow-hidden">
+                
+                {/* Left Sidebar Menu of the 4 files */}
+                <div className="w-full md:w-80 bg-slate-50/50 p-4 overflow-y-auto space-y-4 shrink-0 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Silakan Pilih Berkas:</span>
+                    
+                    <div className="space-y-2">
+                      {fileTabs.map((tab) => {
+                        const isActive = tab.key === activePreviewFileKey;
+                        const hasUrl = !!tab.url;
+
+                        return (
+                          <button
+                            key={tab.key}
+                            onClick={() => hasUrl && setActivePreviewFileKey(tab.key)}
+                            disabled={!hasUrl}
+                            className={`w-full text-left p-3 rounded-xl border transition-all flex items-start gap-2.5 relative ${
+                              isActive
+                                ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                                : hasUrl
+                                ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 cursor-pointer'
+                                : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-60'
+                            }`}
+                          >
+                            <FileText size={16} className={`shrink-0 ${isActive ? 'text-white' : tab.iconColor}`} />
+                            <div className="min-w-0 flex-1">
+                              <span className={`text-[11px] font-extrabold block leading-snug ${isActive ? 'text-white' : 'text-slate-800'}`}>
+                                {tab.label}
+                              </span>
+                              <span className={`text-[9.5px] block truncate mt-0.5 ${isActive ? 'text-blue-100' : 'text-slate-450'}`}>
+                                {hasUrl ? tab.filename : 'Tidak diunggah pemohon'}
+                              </span>
+                            </div>
+
+                            {/* Status Indicator bubble */}
+                            <span className="absolute right-2.5 top-2.5 flex h-2 w-2">
+                              {hasUrl ? (
+                                <span className={`relative inline-flex rounded-full h-2 w-2 ${isActive ? 'bg-white' : 'bg-green-500'}`} />
+                              ) : (
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-300" />
+                              )}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* General actions for drive folder */}
+                  <div className="bg-slate-100 border border-slate-200 rounded-xl p-3 space-y-2.5">
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none">Aksi Tambahan Folder</div>
+                    {previewingPmhFiles.folderPemohonUrl ? (
+                      <a
+                        href={previewingPmhFiles.folderPemohonUrl}
+                        target="_blank"
+                        rel="referrer noopener"
+                        className="w-full flex items-center justify-center gap-1.5 py-2 px-3 border border-blue-400 bg-blue-50 hover:bg-blue-100 text-blue-700 font-extrabold text-[10.5px] rounded-xl text-center shadow-3xs transition-all cursor-pointer"
+                      >
+                        <FolderOpen size={13} />
+                        Buka Folder G-Drive
+                        <ArrowUpRight size={10} />
+                      </a>
+                    ) : (
+                      <div className="text-[9.5px] text-slate-400 italic text-center py-1">Tautan folder tidak tersedia</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right Viewer content area */}
+                <div className="flex-1 bg-slate-100 p-4 flex flex-col overflow-hidden">
+                  {activeFile.url ? (
+                    <div className="flex-1 flex flex-col overflow-hidden bg-white border border-slate-200 rounded-xl shadow-xs">
+                      {/* Top Bar inside View Area */}
+                      <div className="bg-slate-50 border-b border-slate-200 p-2.5 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
+                        <div className="min-w-0">
+                          <span className="text-[9px] uppercase tracking-wide text-slate-400 font-bold block">Berkas Terpilih</span>
+                          <span className="text-xs font-bold text-slate-800 block truncate">{activeFile.filename}</span>
+                        </div>
+                        <a
+                          href={activeFile.url}
+                          target="_blank"
+                          rel="referrer noopener"
+                          className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-605 hover:bg-blue-600 text-white rounded-lg font-extrabold text-[10.5px] transition-colors cursor-pointer shadow-3xs"
+                        >
+                          <ExternalLink size={12} />
+                          Buka Berkas di Tab Baru
+                        </a>
+                      </div>
+
+                      {/* Embedded Preview PDF Iframe */}
+                      <div className="flex-1 relative bg-slate-300">
+                        <iframe
+                          src={activeEmbedUrl}
+                          className="absolute inset-0 w-full h-full border-none"
+                          title={activeFile.label}
+                          allow="autoplay"
+                        />
+                        {/* Underlay Info helper if iframe has issue */}
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-semibold px-4 py-2 rounded-full pointer-events-none flex items-center gap-2">
+                          <ShieldCheck size={12} className="text-blue-400" />
+                          <span>G-Drive Live PDF Embed. Silakan gunakan tombol kanan atas jika file gagal dimuat.</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-400 space-y-3 shadow-3xs">
+                      <div className="p-4 bg-slate-50 rounded-full text-slate-350">
+                        <FileText size={42} />
+                      </div>
+                      <div>
+                        <h4 className="font-extrabold text-slate-700 text-sm">Berkas Belum Diunggah</h4>
+                        <p className="text-[11px] text-slate-500 max-w-sm mx-auto mt-1 leading-normal">
+                          Pemohon belum mengunggah dokumen persyaratan {activeFile.label} ke sistem atau tautannya tidak sah.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

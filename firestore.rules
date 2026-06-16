@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Catch-all match for our collections
+    match /asn/{asnId} {
+      allow read, write: if true;
+    }
+    match /sk/{skId} {
+      allow read, write: if true;
+    }
+    match /sp/{spId} {
+      allow read, write: if true;
+    }
+    match /permohonan/{permohonanId} {
+      allow read, write: if true;
+    }
+    match /kopSurat/{kopId} {
+      allow read, write: if true;
+    }
+    
+    // Default fallback
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

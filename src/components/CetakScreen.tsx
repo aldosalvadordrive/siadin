@@ -31,6 +31,8 @@ interface CetakScreenProps {
   selectedDocumentId: string | null;
   selectedDocumentType: 'Keterangan' | 'Panggilan' | null;
   kopSurat?: KopSurat;
+  onUpdateSk?: (updatedSk: SuratKeterangan) => void;
+  onUpdateSp?: (updatedSp: SuratPanggilan) => void;
 }
 
 export default function CetakScreen({
@@ -40,6 +42,8 @@ export default function CetakScreen({
   selectedDocumentId,
   selectedDocumentType,
   kopSurat,
+  onUpdateSk,
+  onUpdateSp,
 }: CetakScreenProps) {
   const activeKop = kopSurat || {
     pemda: 'PEMERINTAH KABUPATEN TIMOR TENGAH UTARA',
@@ -54,6 +58,10 @@ export default function CetakScreen({
   const [scaleFactor, setScaleFactor] = useState<number>(100);
   const [hasWatermark, setHasWatermark] = useState<boolean>(true);
   const [marginSize, setMarginSize] = useState<'Standard' | 'Narrow' | 'Wide'>('Standard');
+
+  // Local state for Nomor & Tanggal Surat to support real-time user updates
+  const [localNoSurat, setLocalNoSurat] = useState('');
+  const [localTanggalSurat, setLocalTanggalSurat] = useState('');
 
   const paperDims = {
     'A4': { width: '210mm', height: '297mm' },
@@ -78,23 +86,76 @@ export default function CetakScreen({
   const skDoc = skList.find((x) => x.id === activeId);
   const spDoc = spList.find((x) => x.id === activeId);
 
+  // Clean NIP normalization helper
+  const cleanNipStr = (val?: string) => val ? val.replace(/\s/g, '') : '';
+
+  // Robustly resolve active ASN data. Prefer matching actual ID or normalized NIP.
+  // If not found in the state, fallback to a robust placeholder generated from the document fields to prevent showing "Yohanes S. Anin" or other unrelated user's details.
   const activeASN = asnList.find((a) => {
-    if (activeType === 'Keterangan' && skDoc) return a.id === skDoc.asnId;
+    if (activeType === 'Keterangan' && skDoc) {
+      const idMatches = a.id === skDoc.asnId;
+      const nipMatches = skDoc.asnNip && (cleanNipStr(a.nip) === cleanNipStr(skDoc.asnNip));
+      return idMatches || nipMatches;
+    }
     if (activeType === 'Panggilan' && spDoc) return a.id === spDoc.asnId;
     return false;
-  }) || asnList[0];
+  }) || {
+    id: skDoc?.asnId || spDoc?.asnId || 'temp-id',
+    nama: (activeType === 'Keterangan' ? skDoc?.asnNama : '') || asnList[0]?.nama || '',
+    nip: (activeType === 'Keterangan' ? skDoc?.asnNip : '') || asnList[0]?.nip || '',
+    golongan: (activeType === 'Keterangan' ? skDoc?.asnGolongan : '') || asnList[0]?.golongan || '',
+    jabatan: (activeType === 'Keterangan' ? skDoc?.asnJabatan : '') || asnList[0]?.jabatan || '',
+    unitKerja: (activeType === 'Keterangan' ? skDoc?.asnUnitKerja : '') || asnList[0]?.unitKerja || '',
+    statusDisiplin: 'Bersih'
+  };
 
   const handleTriggerPrint = () => {
     // Elegant system print instruction
     window.print();
   };
 
+  // Sync state when active document changes or when document props change from parent
+  React.useEffect(() => {
+    if (activeType === 'Keterangan' && skDoc) {
+      setLocalNoSurat(skDoc.noSurat || '');
+      setLocalTanggalSurat(skDoc.tanggalSurat || '');
+    } else if (activeType === 'Panggilan' && spDoc) {
+      setLocalNoSurat(spDoc.noSurat || '');
+      setLocalTanggalSurat(spDoc.tanggalSurat || '');
+    }
+  }, [activeId, activeType, skDoc?.id, skDoc?.noSurat, skDoc?.tanggalSurat, spDoc?.id, spDoc?.noSurat, spDoc?.tanggalSurat]);
+
+  const handleNoSuratChange = (newVal: string) => {
+    setLocalNoSurat(newVal);
+    if (activeType === 'Keterangan' && skDoc && onUpdateSk) {
+      onUpdateSk({ ...skDoc, noSurat: newVal });
+    } else if (activeType === 'Panggilan' && spDoc && onUpdateSp) {
+      onUpdateSp({ ...spDoc, noSurat: newVal });
+    }
+  };
+
+  const handleTanggalSuratChange = (newVal: string) => {
+    setLocalTanggalSurat(newVal);
+    if (activeType === 'Keterangan' && skDoc && onUpdateSk) {
+      onUpdateSk({ ...skDoc, tanggalSurat: newVal });
+    } else if (activeType === 'Panggilan' && spDoc && onUpdateSp) {
+      onUpdateSp({ ...spDoc, tanggalSurat: newVal });
+    }
+  };
+
   const formattedDate = (rawDate: string) => {
-    return new Date(rawDate).toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
+    if (!rawDate) return '...';
+    try {
+      const d = new Date(rawDate);
+      if (isNaN(d.getTime())) return rawDate;
+      return d.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    } catch {
+      return rawDate;
+    }
   };
 
   // Map margins
@@ -112,6 +173,35 @@ export default function CetakScreen({
         <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
           <Sliders className="text-blue-600" size={18} />
           <h3 className="font-extrabold text-xs uppercase text-slate-800 tracking-wider m-0">Pengaturan Cetak</h3>
+        </div>
+
+        {/* Input Form for Nomor & Tanggal Surat */}
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-3 shadow-2xs">
+          <div className="flex items-center gap-1.5 pb-1.5 border-b border-slate-200/60">
+            <Sparkles className="text-blue-600" size={13} strokeWidth={2.5} />
+            <span className="text-[10px] font-extrabold uppercase text-slate-700 tracking-wider">Identifikasi No & Tgl</span>
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wide">Nomor Surat</label>
+            <input
+              type="text"
+              value={localNoSurat}
+              onChange={(e) => handleNoSuratChange(e.target.value)}
+              placeholder="Contoh: 800/124/BKPSDMD"
+              className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all font-mono"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wide">Tanggal Surat</label>
+            <input
+              type="date"
+              value={localTanggalSurat}
+              onChange={(e) => handleTanggalSuratChange(e.target.value)}
+              className="w-full bg-white border border-slate-205 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all font-sans cursor-pointer"
+            />
+          </div>
         </div>
 
         {/* Paper size setting */}
@@ -274,7 +364,7 @@ export default function CetakScreen({
                     <span className="block text-[12pt] font-extrabold uppercase mt-3">SURAT  PERNYATAAN</span>
                     <span className="block text-[11pt] font-extrabold mt-0.5 tracking-tight leading-none">TIDAK PERNAH DIJATUHI HUKUMAN DISIPLIN TINGKAT SEDANG / BERAT</span>
                     <span className="block font-sans text-[11pt] mt-2 font-bold select-text text-black">
-                      Nomor : {skDoc.noSurat}
+                      Nomor : {localNoSurat || skDoc.noSurat}
                     </span>
                   </div>
 
@@ -403,7 +493,7 @@ export default function CetakScreen({
                   {/* Signatory on right */}
                   <div className="text-left pl-3 relative flex flex-col justify-between min-h-[200px]" style={{ fontFamily: 'Arial, sans-serif' }}>
                     <div className="leading-tight text-black pl-8 relative">
-                      <span className="block">Kefamenanu, {formattedDate(skDoc.tanggalSurat)}</span>
+                      <span className="block">Kefamenanu, {formattedDate(localTanggalSurat || skDoc.tanggalSurat)}</span>
                       <div className="flex items-start mt-1">
                         <span className="w-8 -ml-8 font-bold select-none text-black inline-block">an.</span>
                         <span className="font-bold uppercase block">BUPATI TIMOR TENGAH UTARA</span>
@@ -433,7 +523,7 @@ export default function CetakScreen({
                 <div>
                   <div className="text-center font-bold tracking-tight">
                     <span className="underline block text-[14px] uppercase font-black">{skDoc.jenisSurat}</span>
-                    <span className="block font-mono text-[11px] mt-1">Nomor: {skDoc.noSurat}</span>
+                    <span className="block font-mono text-[11px] mt-1">Nomor: {localNoSurat || skDoc.noSurat}</span>
                   </div>
 
                   <p className="indent-8 text-justify mt-6 leading-relaxed">
@@ -464,7 +554,7 @@ export default function CetakScreen({
                 {/* Signature stamp area */}
                 <div className="flex justify-end mt-12 font-sans text-xs">
                   <div className="w-2/3 text-left pl-14 relative">
-                    <span>Kefamenanu, {formattedDate(skDoc.tanggalSurat)}</span>
+                    <span>Kefamenanu, {formattedDate(localTanggalSurat || skDoc.tanggalSurat)}</span>
                     <span className="block font-bold mt-1 uppercase text-[11px]">{skDoc.penandatanganJabatan}</span>
                     
                     {/* Visual Stamp Seal removed per request */}
@@ -484,7 +574,7 @@ export default function CetakScreen({
                   <div className="tracking-widest text-black">RAHASIA</div>
                   <div className="mt-3.5 tracking-wider text-black">PEMANGGILAN {spDoc.panggilanKe === 1 ? 'I' : spDoc.panggilanKe === 2 ? 'II' : 'III'}</div>
                   <div className="font-normal capitalize mt-3 text-[11.5pt] normal-case text-black">
-                    Nomor: {spDoc.noSurat}
+                    Nomor: {localNoSurat || spDoc.noSurat}
                   </div>
                 </div>
 
@@ -608,7 +698,7 @@ export default function CetakScreen({
                 {/* Signatory right aligned */}
                 <div className="col-span-6 text-left pl-8 relative flex flex-col justify-end min-h-[160px] leading-snug">
                   <div className="mb-1 text-black">
-                    <span className="block text-right pr-6">Kefamenanu, {formattedDate(spDoc.tanggalSurat)}</span>
+                    <span className="block text-right pr-6">Kefamenanu, {formattedDate(localTanggalSurat || spDoc.tanggalSurat)}</span>
                     <span className="block mt-2 font-bold text-right pr-6">{spDoc.penandatanganJabatan}</span>
                   </div>
 
